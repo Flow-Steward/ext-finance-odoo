@@ -14,7 +14,8 @@ components:
 
     Reads the Odoo version and makes one authenticated read to check the address, database and API key.
 
-    - Action id: `test_connection` · read
+    - Action id: `test_connection`
+    - Kind: read
     - Odoo calls: `/web/webclient/version_info`, `res.users context_get`
     - Inputs: none
     - Results: `connected`, `odoo_version`, `server_version`, `api`, `language`
@@ -23,7 +24,8 @@ components:
 
     Looks the partner (customer or supplier) up by reference, then VAT, then e-mail; several matches or conflicting values are an error. Creates it only when none matches.
 
-    - Action id: `find_or_create_partner` · write
+    - Action id: `find_or_create_partner`
+    - Kind: write
     - Odoo calls: `res.partner search_read`, `res.partner create`
     - Inputs: `ref` (optional), `vat` (optional), `email` (optional), `name` (optional), `is_company` (optional), `phone` (optional), `street` (optional), `city` (optional), `zip` (optional), `country_code` (optional)
     - Results: `partner_id`, `created`, `matched_by`, `record`
@@ -32,7 +34,8 @@ components:
 
     Looks the product up by internal reference, then barcode; creates it when none matches, as goods (optionally stocked) or a service, with the right fields for the Odoo version.
 
-    - Action id: `find_or_create_product` · write
+    - Action id: `find_or_create_product`
+    - Kind: write
     - Odoo calls: `product.product search_read`, `product.product create`
     - Inputs: `product_code` (optional), `barcode` (optional), `name` (optional), `kind` (optional), `storable` (optional), `list_price` (optional)
     - Results: `product_id`, `created`, `matched_by`, `record`
@@ -41,7 +44,8 @@ components:
 
     Creates a customer invoice (account.move) with its lines in one request, after finding — or creating — the partner; can attach a file and post it. With a reference, a rerun returns the customer invoice already created for the same partner and date instead of a second one.
 
-    - Action id: `create_customer_invoice` · write
+    - Action id: `create_customer_invoice`
+    - Kind: write
     - Odoo calls: `res.partner search_read / create`, `account.move search_read / create`, `ir.attachment create`, `account.move action_post`
     - Needs the Odoo app: `account`
     - Inputs: `partner_id` (optional), `partner_ref` (optional), `partner_vat` (optional), `partner_email` (optional), `partner_name` (optional), `reference` (optional), `invoice_date` (optional), `due_date` (optional), `currency_code` (optional), `notes` (optional), `lines`, `post` (optional), `document_file` (optional)
@@ -51,7 +55,8 @@ components:
 
     Creates a vendor bill (account.move) with its lines in one request, after finding — or creating — the partner; can attach a file and post it. With a reference, a rerun returns the vendor bill already created for the same partner and date instead of a second one.
 
-    - Action id: `create_vendor_bill` · write
+    - Action id: `create_vendor_bill`
+    - Kind: write
     - Odoo calls: `res.partner search_read / create`, `account.move search_read / create`, `ir.attachment create`, `account.move action_post`
     - Needs the Odoo app: `account`
     - Inputs: `partner_id` (optional), `partner_ref` (optional), `partner_vat` (optional), `partner_email` (optional), `partner_name` (optional), `reference` (optional), `invoice_date` (optional), `due_date` (optional), `currency_code` (optional), `notes` (optional), `lines`, `post` (optional), `document_file` (optional)
@@ -59,9 +64,10 @@ components:
 
     ### Register payment
 
-    Pays a posted invoice or bill in full or in part with Odoo's payment wizard, which creates, posts and reconciles the payment. An invoice already paid, or the same payment (memo, amount, date) found again, is not paid twice.
+    Pays a posted invoice or bill in full or in part with Odoo's payment wizard, which creates, posts and reconciles the payment. An invoice already paid, or the same payment (memo, amount, date) found again, is not paid twice. Without a memo a partial payment run again is registered again.
 
-    - Action id: `register_payment` · write
+    - Action id: `register_payment`
+    - Kind: write
     - Odoo calls: `account.move read`, `account.payment search_read`, `account.payment.register create`, `account.payment.register action_create_payments`
     - Needs the Odoo app: `account`
     - Inputs: `invoice_id`, `amount` (optional), `payment_date` (optional), `journal_code` (optional), `memo` (optional)
@@ -71,7 +77,8 @@ components:
 
     Creates a quotation with its lines after finding — or creating — the customer, and can confirm it into a sale order. With a reference, a rerun returns the order already created.
 
-    - Action id: `create_sale_order` · write
+    - Action id: `create_sale_order`
+    - Kind: write
     - Odoo calls: `res.partner search_read / create`, `sale.order search_read / create`, `sale.order action_confirm`
     - Needs the Odoo app: `sale`
     - Inputs: `partner_id` (optional), `partner_ref` (optional), `partner_vat` (optional), `partner_email` (optional), `partner_name` (optional), `reference` (optional), `order_date` (optional), `lines`, `confirm` (optional)
@@ -81,7 +88,8 @@ components:
 
     Quantities on hand, reserved and available in internal locations, per product, location and lot.
 
-    - Action id: `stock_levels` · read
+    - Action id: `stock_levels`
+    - Kind: read
     - Odoo calls: `stock.quant search_read`
     - Needs the Odoo app: `stock`
     - Inputs: `product_id` (optional), `product_code` (optional), `location_id` (optional), `limit` (optional), `offset` (optional)
@@ -91,35 +99,39 @@ components:
 
     A product's sales price, list price and cost, and the pricelist rules for it. Odoo's computed pricelist price is a private method and cannot be called through the API.
 
-    - Action id: `product_prices` · read
+    - Action id: `product_prices`
+    - Kind: read
     - Odoo calls: `product.product read`, `product.pricelist.item search_read`
     - Inputs: `product_id` (optional), `product_code` (optional), `pricelist_id` (optional)
     - Results: `product_id`, `product`, `sales_price`, `list_price`, `cost`, `currency`, `unit`, `pricelist_rules`
 
     ### Changes since
 
-    Records of one kind changed after a moment (write_date), oldest first.
+    Records of one kind changed at or after a moment (write_date), oldest first, archived ones included. To continue, pass next_since as since and next_after_id as after_id: no record is skipped. The last second read may come again on the next call; match records by id.
 
-    - Action id: `changes_since` · read
+    - Action id: `changes_since`
+    - Kind: read
     - Odoo calls: `<model> search_read on write_date`
-    - Inputs: `entity`, `since`, `fields` (optional), `limit` (optional), `offset` (optional)
-    - Results: `model`, `records`, `count`, `has_more`, `next_offset`
+    - Inputs: `entity`, `since`, `after_id` (optional), `fields` (optional), `limit` (optional)
+    - Results: `model`, `records`, `count`, `has_more`, `next_since`, `next_after_id`
 
     ### Partner balance
 
     What a partner owes and is owed: Odoo's receivable and payable totals, and the open invoices and bills with what is still due and what is overdue.
 
-    - Action id: `partner_balance` · read
+    - Action id: `partner_balance`
+    - Kind: read
     - Odoo calls: `res.partner read`, `account.move search_read`
     - Needs the Odoo app: `account`
     - Inputs: `partner_id` (optional), `partner_ref` (optional), `partner_vat` (optional), `partner_email` (optional), `limit` (optional), `offset` (optional)
-    - Results: `partner_id`, `partner`, `receivable`, `payable`, `open_receivable`, `open_payable`, `overdue`, `documents`, `count`, `complete`, `next_offset`
+    - Results: `partner_id`, `partner`, `receivable`, `payable`, `open_receivable`, `open_payable`, `overdue_receivable`, `overdue_payable`, `documents`, `count`, `complete`, `next_offset`
 
     ### Attach file to a record
 
     Attaches a workflow file to any record (an invoice, an order, a partner) and can make it the record's main attachment.
 
-    - Action id: `attach_file` · write
+    - Action id: `attach_file`
+    - Kind: write
     - Odoo calls: `ir.attachment create`, `<model> write message_main_attachment_id`
     - Inputs: `model`, `record_id`, `document_file`, `file_name` (optional), `set_main` (optional)
     - Results: `attachment_id`, `model`, `record_id`, `main_set`
@@ -128,7 +140,8 @@ components:
 
     Saves a file attached in Odoo as a workflow file: by attachment id, or the newest file on a record (optionally by name).
 
-    - Action id: `download_attachment` · read
+    - Action id: `download_attachment`
+    - Kind: read
     - Odoo calls: `ir.attachment read / search_read`
     - Inputs: `attachment_id` (optional), `model` (optional), `record_id` (optional), `file_name` (optional)
     - Results: `found`, `document_file`, `attachment_id`, `file_name`, `mimetype`, `size_bytes`
@@ -150,7 +163,7 @@ components:
 
     ### Writes, retries and errors
 
-    - Every create, update, delete, post, confirm, payment and method call goes through Flow Steward's external-effect record, so a retried step does not send it twice. Test runs never write.
+    - Flow Steward remembers every create, update, delete, post, confirm, payment and method call it made, so a retried step does not send it twice. Test runs never write.
     - Each Odoo call runs in its own database transaction. When Odoo itself refuses a call — a validation error, missing rights, a missing record, a locked record — nothing was saved and the step says so.
     - A business method (posting an invoice, confirming an order, registering a payment, any method you call) may contact outside services, such as e-invoicing, before it fails. A server error on one of these, a timeout or a lost connection is reported as an unknown outcome and is not retried: check the record in Odoo first.
     - Everyday steps look up before they create (partners, products, invoices with a reference, orders with a reference, payments with a memo), so running one again after an unknown outcome finds what the first run made.
@@ -168,7 +181,8 @@ components:
 
     Reads the records of any model that match a domain (search_read), page by page.
 
-    - Action id: `search_records` · read
+    - Action id: `search_records`
+    - Kind: read
     - Odoo calls: `<model> fields_get`, `<model> search_read`
     - Inputs: `model`, `domain` (optional), `fields` (optional), `order` (optional), `limit` (optional), `offset` (optional), `fetch_all_pages` (optional), `max_pages` (optional)
     - Results: `model`, `records`, `record`, `count`, `next_offset`, `has_more`
@@ -177,7 +191,8 @@ components:
 
     Reads records of any model by id.
 
-    - Action id: `read_records` · read
+    - Action id: `read_records`
+    - Kind: read
     - Odoo calls: `<model> read`
     - Inputs: `model`, `ids`, `fields` (optional)
     - Results: `model`, `records`, `record`, `count`
@@ -186,7 +201,8 @@ components:
 
     Counts the records of any model that match a domain.
 
-    - Action id: `count_records` · read
+    - Action id: `count_records`
+    - Kind: read
     - Odoo calls: `<model> search_count`
     - Inputs: `model`, `domain` (optional)
     - Results: `model`, `count`
@@ -195,7 +211,8 @@ components:
 
     Groups records by fields and totals them (read_group), in the form each Odoo version uses.
 
-    - Action id: `group_records` · read
+    - Action id: `group_records`
+    - Kind: read
     - Odoo calls: `<model> read_group`
     - Inputs: `model`, `domain` (optional), `groupby` (optional), `aggregates` (optional), `limit` (optional)
     - Results: `model`, `groups`, `count`
@@ -204,7 +221,8 @@ components:
 
     Lists a model's fields with their labels, types, relations and whether they are required or read-only.
 
-    - Action id: `describe_fields` · read
+    - Action id: `describe_fields`
+    - Kind: read
     - Odoo calls: `<model> fields_get`
     - Inputs: `model`
     - Results: `model`, `fields`, `count`
@@ -213,7 +231,8 @@ components:
 
     Creates one record of any model with field values (names checked against the model).
 
-    - Action id: `create_record` · write
+    - Action id: `create_record`
+    - Kind: write
     - Odoo calls: `<model> create`
     - Inputs: `model`, `values`
     - Results: `model`, `id`
@@ -222,7 +241,8 @@ components:
 
     Writes the same field values on records of any model.
 
-    - Action id: `update_records` · write
+    - Action id: `update_records`
+    - Kind: write
     - Odoo calls: `<model> write`
     - Inputs: `model`, `ids`, `values`
     - Results: `model`, `ids`, `updated`
@@ -231,7 +251,8 @@ components:
 
     Deletes records of any model.
 
-    - Action id: `delete_records` · write
+    - Action id: `delete_records`
+    - Kind: write
     - Odoo calls: `<model> unlink`
     - Inputs: `model`, `ids`
     - Results: `model`, `ids`, `deleted`
@@ -240,7 +261,8 @@ components:
 
     Calls a public method of any model (for example action_post, action_confirm), on records or on the model. A server error is reported as an unknown outcome, never retried.
 
-    - Action id: `call_method` · write
+    - Action id: `call_method`
+    - Kind: write
     - Odoo calls: `<model> <method>`
     - Inputs: `model`, `method`, `ids` (optional), `kwargs` (optional)
     - Results: `model`, `method`, `result`
@@ -249,7 +271,8 @@ components:
 
     Reads every record of any model that matches a domain, 200 at a time, into a JSON-lines workflow file.
 
-    - Action id: `export_records` · read
+    - Action id: `export_records`
+    - Kind: read
     - Odoo calls: `<model> search_read`
     - Inputs: `model`, `domain` (optional), `fields` (optional), `order` (optional), `start_offset` (optional), `max_pages` (optional)
     - Results: `artifact_handle`, `filename`, `content_type`, `record_count`, `pages_fetched`, `complete`, `resume_offset`, `stopped_by`

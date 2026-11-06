@@ -378,7 +378,12 @@ forms:
     label: Since
     widget_type: text
     required: true
-    help_text: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS, in UTC.
+    help_text: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS, in UTC. Records changed at this moment are included.
+  - name: after_id
+    label: After id
+    widget_type: number
+    required: false
+    help_text: Pass next_after_id from the previous call, with its next_since as since.
   - name: fields
     label: Fields
     widget_type: json
@@ -389,11 +394,6 @@ forms:
     widget_type: number
     required: false
     help_text: Records per page, 1 to 200. Default 80.
-  - name: offset
-    label: Offset
-    widget_type: number
-    required: false
-    help_text: How many records to skip; pass next_offset to continue.
 - operation_id: partner_balance
   title: Partner balance
   fields:

@@ -41,7 +41,7 @@ BEHAVIOUR = """\
 
 ### Writes, retries and errors
 
-- Every create, update, delete, post, confirm, payment and method call goes through Flow Steward's external-effect record, so a retried step does not send it twice. Test runs never write.
+- Flow Steward remembers every create, update, delete, post, confirm, payment and method call it made, so a retried step does not send it twice. Test runs never write.
 - Each Odoo call runs in its own database transaction. When Odoo itself refuses a call — a validation error, missing rights, a missing record, a locked record — nothing was saved and the step says so.
 - A business method (posting an invoice, confirming an order, registering a payment, any method you call) may contact outside services, such as e-invoicing, before it fails. A server error on one of these, a timeout or a lost connection is reported as an unknown outcome and is not retried: check the record in Odoo first.
 - Everyday steps look up before they create (partners, products, invoices with a reference, orders with a reference, payments with a memo), so running one again after an unknown outcome finds what the first run made.
@@ -97,7 +97,8 @@ def _section(op: dict[str, Any], spec: dict[str, Any]) -> list[str]:
     title = str(op["display_name"]).removeprefix(ADVANCED_PREFIX)
     kind = "write" if op["operation_kind"] == "action" else "read"
     lines = [f"### {title}", "", str(op["description"]), ""]
-    lines.append(f"- Action id: `{op['operation_id']}` · {kind}")
+    lines.append(f"- Action id: `{op['operation_id']}`")
+    lines.append(f"- Kind: {kind}")
     lines.append(f"- Odoo calls: {', '.join(f'`{c}`' for c in spec.get('calls', []))}")
     if spec.get("module"):
         lines.append(f"- Needs the Odoo app: `{spec['module']}`")

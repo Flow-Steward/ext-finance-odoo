@@ -1,4 +1,4 @@
-"""Reading Rivile ERP JSON without trusting the case of its field names."""
+"""Reading Odoo answers without trusting the case of their field names."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from typing import Any
 
 
 def field(record: Any, name: str) -> Any:
-    """A field of a Rivile ERP object, matched case-insensitively (exact match first)."""
+    """A field of an Odoo record, matched case-insensitively (exact match first)."""
     if not isinstance(record, Mapping):
         return None
     if name in record:

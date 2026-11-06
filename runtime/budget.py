@@ -4,7 +4,7 @@ The host scans every string of an extension response for reflected secrets and
 fails closed past fixed budgets (core ``secret_reflection``: 16,384 candidate
 strings — dict keys and string values — 65,536 traversed nodes, 8 M compared
 code points), and ``main.py`` caps the serialized response at 4.5 MiB. A wide
-Rivile ERP list reaches those limits quickly: 100 rows of 80 fields is already
+Odoo search reaches those limits quickly: 100 rows of 80 fields is already
 16,000 strings. This module measures a result the same way, with a margin for
 the envelope, so multi-page reads stop at a page boundary instead of being
 blocked whole.
@@ -60,8 +60,8 @@ def _within(totals: tuple[int, int, int, int], scale: float = 1.0) -> bool:
 def too_large() -> ExtensionError:
     return ExtensionError(
         errors.RESPONSE_TOO_LARGE,
-        "This Rivile ERP result is too large for one step output. Narrow it with filters, "
-        "lower size, or use export_list to save it as a file.",
+        "This Odoo result is too large for one step output. Narrow it with a domain, "
+        "fewer fields or a lower limit, or use export_records to save it as a file.",
         definitely_no_external_effect=True,
         external_effect_status="failed",
     )

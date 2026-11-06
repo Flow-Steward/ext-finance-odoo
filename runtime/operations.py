@@ -108,6 +108,16 @@ def handle_runtime(
         budget.ensure_fits(result)
         return _ok(result)
     except DeadlineReached:
+        if transport is not None and transport.mutated:
+            return error_response(
+                errors.TIMEOUT_UNKNOWN,
+                "The step ran out of time after a change was sent to Odoo; check Odoo before "
+                "running it again",
+                retry_facts={
+                    "definitely_no_external_effect": False,
+                    "external_effect_status": "timeout_unknown",
+                },
+            )
         return error_response(
             errors.TIMEOUT,
             "The step ran out of time before Odoo could be called",
@@ -119,6 +129,16 @@ def handle_runtime(
             exc.code, exc.message, retry_facts=exc.retry_facts(), data_errors=exc.data_errors
         )
     except Exception:
+        if transport is not None and transport.mutated:
+            return error_response(
+                errors.TIMEOUT_UNKNOWN,
+                "The operation failed after a change was sent to Odoo; check Odoo before "
+                "running it again",
+                retry_facts={
+                    "definitely_no_external_effect": False,
+                    "external_effect_status": "timeout_unknown",
+                },
+            )
         unsent = transport is None or not transport.attempted
         response = error_response(errors.INTERNAL_ERROR, "The operation could not be completed")
         if unsent:
@@ -490,7 +510,14 @@ def read_records(context: Context) -> dict[str, Any]:
     record_ids = domain.ids(inputs.get("ids"), limit=MAX_LIMIT)
     fields = domain.field_list(inputs.get("fields"), known) or ["id", "display_name"]
     rows = context.call(model, "read", ids=record_ids, kwargs={"fields": fields})
-    records = rows if isinstance(rows, list) else []
+    if not isinstance(rows, list) or not all(isinstance(r, Mapping) for r in rows):
+        raise ExtensionError(
+            errors.INVALID_RESPONSE,
+            f"Odoo's answer for {model} read is not a list of records",
+            definitely_no_external_effect=True,
+            external_effect_status="failed",
+        )
+    records = [dict(r) for r in rows]
     return {
         "model": model,
         "records": records,
@@ -521,10 +548,7 @@ def group_records(context: Context) -> dict[str, Any]:
     model = model_name(inputs)
     known = context.fields(model)
     query = domain.domain(inputs.get("domain"), known)
-    groupby = domain.field_list(inputs.get("groupby"), None, name="groupby")
-    for index, item in enumerate(groupby):
-        head = item.split(":", 1)[0]
-        domain.field_list([head], known, name=f"groupby[{index}]")
+    groupby = _groupby(inputs.get("groupby"), known)
     aggregates = _aggregates(inputs.get("aggregates"), known)
     limit = _whole("limit", inputs.get("limit"), default=DEFAULT_LIMIT, maximum=MAX_LIMIT)
     if versions.name("read_group_style", context.version()) == "aggregates":
@@ -559,6 +583,35 @@ def group_records(context: Context) -> dict[str, Any]:
             if isinstance(row, Mapping)
         ]
     return {"model": model, "groups": groups, "count": len(groups)}
+
+
+#: Date grouping steps every supported version (16-20) accepts after "field:".
+GRANULARITIES = frozenset({"hour", "day", "week", "month", "quarter", "year"})
+
+
+def _groupby(raw: Any, known: Mapping[str, Any]) -> list[str]:
+    """Fields to group by; a date or datetime field may carry ``:month`` etc."""
+    if raw is None:
+        return []
+    if not isinstance(raw, list) or len(raw) > 10:
+        raise _invalid("groupby must be a list of at most 10 fields, e.g. ['date:month']")
+    result = []
+    for index, item in enumerate(raw):
+        where = f"groupby[{index}]"
+        if not isinstance(item, str):
+            raise _invalid(f"{where} must be a field name")
+        name, _, granularity = item.partition(":")
+        domain.field_list([name], known, name=where)
+        if ":" in item:
+            if granularity not in GRANULARITIES:
+                raise _invalid(
+                    f"{where} grouping must be one of {', '.join(sorted(GRANULARITIES))}"
+                )
+            kind = known.get(name, {}).get("type") if isinstance(known.get(name), Mapping) else None
+            if kind not in (None, "date", "datetime"):
+                raise _invalid(f"{where}: only a date or datetime field takes :{granularity}")
+        result.append(item)
+    return result
 
 
 def _aggregates(raw: Any, known: Mapping[str, Any]) -> list[str]:
@@ -643,6 +696,8 @@ def _method(inputs: Mapping[str, Any]) -> tuple[str, list[int] | None, dict[str,
     for key in kwargs:
         if not isinstance(key, str) or not catalog.METHOD_RE.fullmatch(key):
             raise _invalid("kwargs names must be lower-case identifiers")
+    if "context" in kwargs and not isinstance(kwargs["context"], Mapping):
+        raise _invalid('kwargs.context must be an object such as {"lang": "en_US"}')
     return method, record_ids, dict(kwargs)
 
 

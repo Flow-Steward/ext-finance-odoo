@@ -368,7 +368,7 @@ actions:
   title: Register payment
   description: Pays a posted invoice or bill in full or in part with Odoo's payment wizard, which creates,
     posts and reconciles the payment. An invoice already paid, or the same payment (memo, amount, date)
-    found again, is not paid twice.
+    found again, is not paid twice. Without a memo a partial payment run again is registered again.
   required_scopes:
   - extension:invoke
   handler:
@@ -610,7 +610,9 @@ actions:
   - blocked_address
 - action_id: changes_since
   title: Changes since
-  description: Records of one kind changed after a moment (write_date), oldest first.
+  description: 'Records of one kind changed at or after a moment (write_date), oldest first, archived
+    ones included. To continue, pass next_since as since and next_after_id as after_id: no record is skipped.
+    The last second read may come again on the next call; match records by id.'
   required_scopes:
   - extension:invoke
   handler:
@@ -627,13 +629,13 @@ actions:
   - name: since
     type: string
     required: true
+  - name: after_id
+    type: integer
+    required: false
   - name: fields
     type: array
     required: false
   - name: limit
-    type: integer
-    required: false
-  - name: offset
     type: integer
     required: false
   result_fields:
@@ -641,7 +643,8 @@ actions:
   - records
   - count
   - has_more
-  - next_offset
+  - next_since
+  - next_after_id
   error_codes:
   - invalid_payload
   - invalid_host_envelope
@@ -702,7 +705,8 @@ actions:
   - payable
   - open_receivable
   - open_payable
-  - overdue
+  - overdue_receivable
+  - overdue_payable
   - documents
   - count
   - complete

@@ -117,6 +117,23 @@ def _unknown(message: str, *, status: int | None = None) -> ExtensionError:
     )
 
 
+def _xmlrpc_values(value: Any) -> Any:
+    """``None`` as ``False``, Odoo's "empty" for every field type, at any depth.
+
+    XML-RPC has no null (Odoo serves it with allow_none off), and JSON-2 accepts
+    null where XML-RPC needs False; the same inputs therefore work on both APIs.
+    """
+    if value is None:
+        return False
+    if isinstance(value, Mapping):
+        return {k: _xmlrpc_values(v) for k, v in value.items()}
+    if isinstance(value, tuple):
+        return tuple(_xmlrpc_values(v) for v in value)
+    if isinstance(value, list):
+        return [_xmlrpc_values(v) for v in value]
+    return value
+
+
 class OdooTransport:
     """Sends Odoo requests for one connection."""
 
@@ -138,6 +155,8 @@ class OdooTransport:
         self._uid: int | None = None
         #: True once any request may have left this process.
         self.attempted = False
+        #: True once a mutating request may have left this process.
+        self.mutated = False
         #: Monotonic time after which no request may start (set by the operation).
         self.deadline: float | None = None
         self._call_timeout = timeout_seconds
@@ -271,7 +290,18 @@ class OdooTransport:
     def _xmlrpc(
         self, path: str, method: str, params: tuple[Any, ...], *, mutating: bool, risky: bool
     ) -> Any:
-        body = xmlrpc_client.dumps(params, methodname=method, allow_none=False).encode("utf-8")
+        try:
+            body = xmlrpc_client.dumps(
+                _xmlrpc_values(params), methodname=method, allow_none=False
+            ).encode("utf-8")
+        except (TypeError, OverflowError, ValueError) as exc:
+            raise ExtensionError(
+                errors.INVALID_PAYLOAD,
+                "A value cannot be sent over XML-RPC (numbers must fit in 32 bits; use text, "
+                "numbers, true/false, lists and objects)",
+                definitely_no_external_effect=True,
+                external_effect_status="failed",
+            ) from exc
         status, raw = self._post(path, body, "text/xml", mutating=mutating, risky=risky)
         try:
             return parse_xmlrpc(raw)
@@ -352,6 +382,7 @@ class OdooTransport:
         self._last_sent = self.clock()
         try:
             self.attempted = True
+            self.mutated = self.mutated or mutating
             with self._opener(
                 request, timeout_seconds=self._call_timeout, purpose="Odoo API"
             ) as response:

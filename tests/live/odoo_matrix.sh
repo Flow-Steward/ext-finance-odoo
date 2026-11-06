@@ -3,9 +3,14 @@
 # the Flow Steward stack: own network (fs-odoo-live), own container names.
 #
 #   tests/live/odoo_matrix.sh up 18     # postgres + Odoo 18.0 with account, sale, stock
-#   tests/live/odoo_matrix.sh down 18
+#   tests/live/odoo_matrix.sh down 18   # removes those containers, their volumes, the network
 #
-# "up" prints KEY=<api key> for the admin user of database live<version>.
+# "up" prints the image digests (lines "IMAGE=") and, last, KEY=<api key> for the
+# admin user of database live<version>.
+#
+# Everything this script creates carries the label flowsteward.odoo-live=<version>;
+# it removes only what carries that label and refuses to touch a same-named
+# container that does not (someone else's).
 set -eu
 ACTION=${1:?up or down}
 V=${2:?version 16..20}
@@ -14,19 +19,38 @@ PG=fs-odoo-live-pg$V
 OD=fs-odoo-live-$V
 DB=live$V
 DBARGS="--db_host $PG --db_user odoo --db_password odoo"
+LABEL=flowsteward.odoo-live
+
+owned() {
+  [ "$(docker inspect -f "{{ index .Config.Labels \"$LABEL\" }}" "$1" 2>/dev/null)" = "$V" ]
+}
+
+remove() {
+  for c in "$OD" "$PG"; do
+    if docker inspect "$c" >/dev/null 2>&1; then
+      owned "$c" || { echo "$c exists but was not created by this script; not touching it" >&2; exit 1; }
+      docker rm -f -v "$c" >/dev/null
+    fi
+  done
+}
 
 if [ "$ACTION" = down ]; then
-  docker rm -f "$OD" "$PG" >/dev/null 2>&1 || true
+  remove
+  # The network goes once no container of any version uses it.
+  if [ "$(docker network inspect -f "{{ index .Labels \"$LABEL\" }}" "$NET" 2>/dev/null)" = all ] &&
+    [ -z "$(docker network inspect -f '{{ range .Containers }}x{{ end }}' "$NET")" ]; then
+    docker network rm "$NET" >/dev/null
+  fi
   exit 0
 fi
 
-docker network create "$NET" >/dev/null 2>&1 || true
-docker rm -f "$OD" "$PG" >/dev/null 2>&1 || true
+remove
+docker network inspect "$NET" >/dev/null 2>&1 || docker network create --label "$LABEL=all" "$NET" >/dev/null
 # Odoo 20 needs PostgreSQL 16 or later (it uses any_value()).
 PGIMAGE=postgres:15
 [ "$V" -ge 20 ] && PGIMAGE=postgres:16-alpine
-docker run -d --name "$PG" --network "$NET" -e POSTGRES_USER=odoo -e POSTGRES_PASSWORD=odoo \
-  -e POSTGRES_DB=postgres "$PGIMAGE" >/dev/null
+docker run -d --name "$PG" --label "$LABEL=$V" --network "$NET" -e POSTGRES_USER=odoo \
+  -e POSTGRES_PASSWORD=odoo -e POSTGRES_DB=postgres "$PGIMAGE" >/dev/null
 i=0
 until docker exec "$PG" pg_isready -U odoo >/dev/null 2>&1; do
   i=$((i + 1)); [ "$i" -gt 60 ] && { echo "postgres did not start" >&2; exit 1; }; sleep 1
@@ -35,9 +59,9 @@ DEMO=""
 [ "$V" -ge 19 ] && DEMO="--with-demo"
 ENVS="-e HOST=$PG -e USER=odoo -e PASSWORD=odoo"
 # The image's entrypoint passes the database settings from HOST/USER/PASSWORD.
-docker run --rm --network "$NET" $ENVS "odoo:$V.0" odoo -d "$DB" -i account,sale,stock \
-  --stop-after-init $DEMO >/dev/null 2>&1
-docker run -d --name "$OD" --network "$NET" $ENVS "odoo:$V.0" odoo -d "$DB" \
+docker run --rm -v /var/lib/odoo --network "$NET" $ENVS "odoo:$V.0" odoo -d "$DB" \
+  -i account,sale,stock --stop-after-init $DEMO >/dev/null 2>&1
+docker run -d --name "$OD" --label "$LABEL=$V" --network "$NET" $ENVS "odoo:$V.0" odoo -d "$DB" \
   --db-filter "^$DB\$" >/dev/null
 EXPIRY=""
 [ "$V" -ge 18 ] && EXPIRY=", __import__('datetime').datetime.now() + __import__('datetime').timedelta(days=1)"
@@ -50,5 +74,8 @@ KEY=$(printf "%s\n" \
 i=0
 until docker exec "$OD" python3 -c "import urllib.request;urllib.request.urlopen('http://localhost:8069/web/login')" >/dev/null 2>&1; do
   i=$((i + 1)); [ "$i" -gt 90 ] && { echo "odoo did not start" >&2; exit 1; }; sleep 1
+done
+for image in "odoo:$V.0" "$PGIMAGE"; do
+  echo "IMAGE=$image $(docker image inspect -f '{{ index .RepoDigests 0 }}' "$image")"
 done
 echo "$KEY"

@@ -44,7 +44,10 @@ Odoo 18+ also asks for a duration. The key is shown once. On Odoo Online, API ac
   are `timeout_unknown`. Nothing ambiguous is retried.
 - Everyday steps look up before they create: partners (ref, VAT, e-mail), products (internal
   reference, barcode), invoices and bills with a reference (same partner and date), sale orders with
-  a customer reference, payments with a memo.
+  a customer reference, payments with a memo. A partial payment without a memo cannot be told
+  from a second payment, so running it again pays again.
+- Products, taxes, currencies and units are looked up before a partner is created, so a wrong
+  code stops the step with nothing written.
 - Odoo tracebacks (`debug`, XML-RPC fault stacks) are never passed on; the API key is removed from
   every answer before it is parsed.
 - XML-RPC answers are parsed with defusedxml (DTDs and entities refused) and sent through the
@@ -55,17 +58,32 @@ Odoo 18+ also asks for a duration. The key is shown once. On Odoo Online, API ac
 1. Version-specific names come from `runtime/versions.py`, checked against the odoo/odoo sources of
    16.0 to 20.0 and against live databases (see `tests/live/RESULTS.md`). Odoo Online "saas~19.x"
    servers are treated as 19.
-2. An XML-RPC fault "cannot marshal None" means the method succeeded and returned nothing: Odoo
+2. XML-RPC has no null: `null` in values is sent as `false`, Odoo's empty value; numbers must
+   fit in 32 bits. An XML-RPC fault "cannot marshal None" means the method succeeded and returned nothing: Odoo
    encodes the answer after the transaction committed (`odoo/addons/base/controllers/rpc.py`).
 3. The computed pricelist price is not available: Odoo computes it in private methods.
-4. Find or create partner / product report `succeeded` even when they only found a record: Core
+4. `write_date` is stored with microseconds but read back to the second (checked in the
+   databases of 16 to 20). Changes since therefore never ends a page inside a second unless that
+   second alone fills it, and then reads it in id order; the last second read may be returned
+   again, never skipped.
+5. Find or create partner / product report `succeeded` even when they only found a record: Core
    has no "success without effect" status an extension may report.
 
 ## Development
 
+From the extension folder:
+
 ```bash
 python3 tests/reference/build_contracts.py     # regenerate contracts and pages
 tests/live/odoo_matrix.sh up 18                # disposable Odoo for the live tests
+```
+
+From the Flow Steward checkout (all checks run in the `fs-audit` container):
+
+```bash
+EXT=$PWD/workspace/extensions/flowsteward_odoo
+./core/entrypoints/cli/scripts/lint.sh --checks extension-static,extension-tests --extension-root "$EXT"
+./flow-steward extensions validate flowsteward.odoo --root <bundle folder> --health --marketplace
 ```
 
 The live tests (`tests/live/`) are skipped unless `ODOO_LIVE_URL` is set; see the module docstring.

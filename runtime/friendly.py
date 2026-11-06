@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable, Mapping
-from datetime import date
+from datetime import date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any
 
@@ -39,6 +39,7 @@ PAGE = 80
 
 _NUMBER_RE = re.compile(r"^-?[0-9]{0,15}(\.[0-9]{1,6})?$")
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_ODOO_DATETIME = "%Y-%m-%d %H:%M:%S"
 _SINCE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}:\d{2})?$")
 _COUNTRY_RE = re.compile(r"^[A-Za-z]{2}$")
 _CURRENCY_RE = re.compile(r"^[A-Za-z]{3}$")
@@ -230,18 +231,18 @@ def search_read(
     limit: int = PAGE,
     offset: int = 0,
     order: str | None = None,
+    odoo_context: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
-    rows = context.call(
-        model,
-        "search_read",
-        kwargs={
-            "domain": query,
-            "fields": fields,
-            "limit": limit,
-            "offset": offset,
-            "order": order,
-        },
-    )
+    kwargs: dict[str, Any] = {
+        "domain": query,
+        "fields": fields,
+        "limit": limit,
+        "offset": offset,
+        "order": order,
+    }
+    if odoo_context:
+        kwargs["context"] = odoo_context
+    rows = context.call(model, "search_read", kwargs=kwargs)
     if not isinstance(rows, list) or not all(isinstance(r, Mapping) for r in rows):
         raise ExtensionError(
             errors.INVALID_RESPONSE,
@@ -677,7 +678,31 @@ def invoice_op(
         from .operations import read_input_file
 
         file_body = read_input_file(context, handle)
+    currency = text("currency_code", inputs.get("currency_code"), limit=3)
+    if currency and not _CURRENCY_RE.fullmatch(currency):
+        raise invalid("currency_code must be a three-letter code such as EUR")
+    notes = text("notes", inputs.get("notes"), limit=2000)
     require(context, "account.move")
+    # Every lookup that can refuse the step runs before resolve_partner, which may
+    # create the partner: an unknown product, tax or currency leaves Odoo untouched.
+    use = "sale" if move_type == "out_invoice" else "purchase"
+    cache: dict[str, int] = {}
+    commands = []
+    for index, line in enumerate(lines):
+        values = {k: v for k, v in line.items() if not k.startswith("_")}
+        if line["_product"]:
+            values["product_id"] = resolve_product(context, line["_product"], f"lines[{index}]")
+        if "_taxes" in line:
+            values["tax_ids"] = [[6, 0, _tax_ids(context, line["_taxes"], use, cache)]]
+        commands.append([0, 0, values])
+    currency_id = None
+    if currency:
+        currency_id = _id_by(
+            context,
+            "res.currency",
+            [["name", "=", currency.upper()]],
+            f"currency {currency.upper()}",
+        )
     partner_id, partner_created = resolve_partner(context, inputs, progress)
     if reference:
         found = _same_document(
@@ -709,16 +734,6 @@ def invoice_op(
                 attachment_id=None,
                 posted=posted,
             )
-    use = "sale" if move_type == "out_invoice" else "purchase"
-    cache: dict[str, int] = {}
-    commands = []
-    for index, line in enumerate(lines):
-        values = {k: v for k, v in line.items() if not k.startswith("_")}
-        if line["_product"]:
-            values["product_id"] = resolve_product(context, line["_product"], f"lines[{index}]")
-        if "_taxes" in line:
-            values["tax_ids"] = [[6, 0, _tax_ids(context, line["_taxes"], use, cache)]]
-        commands.append([0, 0, values])
     header: dict[str, Any] = {
         "move_type": move_type,
         "partner_id": partner_id,
@@ -729,37 +744,25 @@ def invoice_op(
         header["invoice_date_due"] = due_date
     if reference:
         header["ref"] = reference
-    notes = text("notes", inputs.get("notes"), limit=2000)
     if notes:
         header["narration"] = notes
-    currency = text("currency_code", inputs.get("currency_code"), limit=3)
-    if currency:
-        if not _CURRENCY_RE.fullmatch(currency):
-            raise invalid("currency_code must be a three-letter code such as EUR")
-        header["currency_id"] = _id_by(
-            context,
-            "res.currency",
-            [["name", "=", currency.upper()]],
-            f"currency {currency.upper()}",
-        )
+    if currency_id is not None:
+        header["currency_id"] = currency_id
     move_id = progress.guard(
         f"Creating the {what}", lambda: _create_one(context, "account.move", header)
     )
     progress.add(f"{what} id {move_id} created as a draft with {len(lines)} lines")
     attachment_id = None
     if file_body is not None:
-        attachment_id = progress.guard(
-            "Attaching the file",
-            lambda: attach(
-                context,
-                "account.move",
-                move_id,
-                file_body[0],
-                file_body[1] or f"{what}.pdf",
-                main=True,
-            ),
+        attachment_id = attach(
+            context,
+            "account.move",
+            move_id,
+            file_body[0],
+            file_body[1] or f"{what}.pdf",
+            main=True,
+            progress=progress,
         )
-        progress.add(f"file attached (attachment id {attachment_id})")
     posted = False
     if post:
         progress.guard(f"Posting the {what}", lambda: _post_move(context, move_id))
@@ -789,7 +792,21 @@ def _read_move(context: Any, move_id: int) -> dict[str, Any] | None:
 # Attachments
 
 
-def attach(context: Any, model: str, record_id: int, body: bytes, name: str, *, main: bool) -> int:
+def attach(
+    context: Any,
+    model: str,
+    record_id: int,
+    body: bytes,
+    name: str,
+    *,
+    main: bool,
+    progress: Progress,
+) -> int:
+    """Create the attachment, then (optionally) make it the record's main one.
+
+    The attachment is recorded in ``progress`` as soon as Odoo created it, so a
+    failing main-attachment write reports it instead of claiming no effect.
+    """
     import base64
 
     content_field = versions.name("attachment_content", context.version())
@@ -799,14 +816,20 @@ def attach(context: Any, model: str, record_id: int, body: bytes, name: str, *, 
         "res_id": record_id,
         content_field: base64.b64encode(body).decode("ascii"),
     }
-    attachment_id = _create_one(context, "ir.attachment", values)
+    attachment_id = progress.guard(
+        "Attaching the file", lambda: _create_one(context, "ir.attachment", values)
+    )
+    progress.add(f"file attached to {model} {record_id} (attachment id {attachment_id})")
     if main and "message_main_attachment_id" in context.fields(model):
-        context.call(
-            model,
-            "write",
-            ids=[record_id],
-            kwargs={"vals": {"message_main_attachment_id": attachment_id}},
-            mutating=True,
+        progress.guard(
+            "Setting the main attachment",
+            lambda: context.call(
+                model,
+                "write",
+                ids=[record_id],
+                kwargs={"vals": {"message_main_attachment_id": attachment_id}},
+                mutating=True,
+            ),
         )
     return attachment_id
 
@@ -828,9 +851,7 @@ def attach_op(context: Any, inputs: Mapping[str, Any], progress: Progress) -> di
     fields = context.fields(model)
     if main and "message_main_attachment_id" not in fields:
         raise invalid(f"{model} has no main attachment; set set_main to false")
-    attachment_id = progress.guard(
-        "Attaching the file", lambda: attach(context, model, record_id, body, name, main=main)
-    )
+    attachment_id = attach(context, model, record_id, body, name, main=main, progress=progress)
     return {
         "attachment_id": attachment_id,
         "model": model,
@@ -887,7 +908,68 @@ def download_op(context: Any, inputs: Mapping[str, Any]) -> dict[str, Any]:
 PAYMENT_INPUTS = {"invoice_id", "amount", "payment_date", "journal_code", "memo"}
 
 
+#: The direction of a payment that settles each kind of document.
+_PAYMENT_TYPE = {
+    "out_invoice": "inbound",
+    "in_refund": "inbound",
+    "in_invoice": "outbound",
+    "out_refund": "outbound",
+}
+
+
+def _paid_before(
+    context: Any,
+    invoice_id: int,
+    invoice: Mapping[str, Any],
+    memo: str,
+    payment_date: str,
+    pay: Decimal,
+) -> bool:
+    """A previous run's payment: same memo, date and amount, AND linked to this invoice.
+
+    Memo and amount alone do not identify a payment: two invoices of one partner
+    may be paid with the same memo. The payment must be reconciled with (or, from
+    Odoo 18, issued for) this invoice, in its currency and direction.
+    """
+    version = context.version()
+    memo_field = versions.name("payment_memo", version)
+    link_fields = ["reconciled_invoice_ids", "reconciled_bill_ids"]
+    if version >= 18:
+        link_fields.append("invoice_ids")
+    rows = search_read(
+        context,
+        "account.payment",
+        [
+            ["partner_id", "=", many2one(invoice, "partner_id")[0]],
+            [memo_field, "=", memo],
+            ["date", "=", payment_date],
+            ["state", "!=", "cancel"],
+        ],
+        ["id", "amount", "currency_id", "payment_type", *link_fields],
+        limit=20,
+    )
+    direction = _PAYMENT_TYPE.get(str(invoice.get("move_type")))
+    currency = many2one(invoice, "currency_id")[0]
+    for row in rows:
+        linked = any(
+            isinstance(row.get(name), list) and invoice_id in row[name] for name in link_fields
+        )
+        if (
+            linked
+            and decimal_of(row, "amount") == pay
+            and row.get("payment_type") == direction
+            and many2one(row, "currency_id")[0] == currency
+        ):
+            return True
+    return False
+
+
 def payment_op(context: Any, inputs: Mapping[str, Any], progress: Progress) -> dict[str, Any]:
+    """Pay a posted invoice; a rerun is recognised only by memo, amount and date.
+
+    Without a memo there is nothing that tells a rerun from a second payment of
+    the same amount, so a partial payment run again without a memo pays again.
+    """
     _allowed(inputs, PAYMENT_INPUTS)
     invoice_id = _required_id(inputs, "invoice_id")
     amount = (
@@ -903,7 +985,16 @@ def payment_op(context: Any, inputs: Mapping[str, Any], progress: Progress) -> d
         "account.move",
         "read",
         ids=[invoice_id],
-        kwargs={"fields": ["state", "payment_state", "amount_residual", "partner_id", "move_type"]},
+        kwargs={
+            "fields": [
+                "state",
+                "payment_state",
+                "amount_residual",
+                "partner_id",
+                "move_type",
+                "currency_id",
+            ]
+        },
     )
     if not isinstance(rows, list) or not rows:
         raise invalid(f"Odoo has no invoice or bill with id {invoice_id}")
@@ -919,28 +1010,13 @@ def payment_op(context: Any, inputs: Mapping[str, Any], progress: Progress) -> d
             "amount_due": decimal_text(residual),
         }
     pay = amount if amount is not None else residual
-    if memo:
-        memo_field = versions.name("payment_memo", context.version())
-        partner_id = many2one(invoice, "partner_id")[0]
-        same = search_read(
-            context,
-            "account.payment",
-            [
-                ["partner_id", "=", partner_id],
-                [memo_field, "=", memo],
-                ["date", "=", payment_date],
-                ["state", "!=", "cancel"],
-            ],
-            ["id", "amount"],
-            limit=5,
-        )
-        if any(decimal_of(r, "amount") == pay for r in same):
-            return {
-                "invoice_id": invoice_id,
-                "created": False,
-                "payment_state": invoice.get("payment_state"),
-                "amount_due": decimal_text(residual),
-            }
+    if memo and _paid_before(context, invoice_id, invoice, memo, payment_date, pay):
+        return {
+            "invoice_id": invoice_id,
+            "created": False,
+            "payment_state": invoice.get("payment_state"),
+            "amount_due": decimal_text(residual),
+        }
     values: dict[str, Any] = {"amount": wire(pay), "payment_date": payment_date}
     if memo:
         values["communication"] = memo
@@ -952,24 +1028,36 @@ def payment_op(context: Any, inputs: Mapping[str, Any], progress: Progress) -> d
             f"bank or cash journal {journal_code}",
         )
     wizard_context = {"active_model": "account.move", "active_ids": [invoice_id]}
-    wizard = _create_one(context, "account.payment.register", values, odoo_context=wizard_context)
+    wizard = progress.guard(
+        "Opening the payment wizard",
+        lambda: _create_one(
+            context, "account.payment.register", values, odoo_context=wizard_context
+        ),
+    )
     # action_create_payments posts and reconciles; it may reach outside services.
-    context.call(
-        "account.payment.register",
-        "action_create_payments",
-        ids=[wizard],
-        kwargs={"context": wizard_context},
-        mutating=True,
-        risky=True,
+    progress.guard(
+        "Registering the payment",
+        lambda: context.call(
+            "account.payment.register",
+            "action_create_payments",
+            ids=[wizard],
+            kwargs={"context": wizard_context},
+            mutating=True,
+            risky=True,
+        ),
     )
     progress.add(f"payment of {decimal_text(pay)} registered on invoice {invoice_id}")
-    after = context.call(
-        "account.move",
-        "read",
-        ids=[invoice_id],
-        kwargs={"fields": ["payment_state", "amount_residual"]},
-    )
-    state = after[0] if isinstance(after, list) and after else {}
+    # Best effort: the payment exists, so a failed read must not hide it.
+    try:
+        after = context.call(
+            "account.move",
+            "read",
+            ids=[invoice_id],
+            kwargs={"fields": ["payment_state", "amount_residual"]},
+        )
+    except (ExtensionError, DeadlineReached):
+        after = None
+    state = after[0] if isinstance(after, list) and after and isinstance(after[0], Mapping) else {}
     return {
         "invoice_id": invoice_id,
         "created": True,
@@ -1062,6 +1150,16 @@ def order_op(context: Any, inputs: Mapping[str, Any], progress: Progress) -> dic
             values["name"] = description
         parsed.append((values, item, text(f"{where}.unit", item.get("unit"), limit=60)))
     require(context, "sale.order")
+    # Products and units are looked up before resolve_partner, which may create
+    # the partner: an unknown product or unit leaves Odoo untouched.
+    uom_field = versions.name("sale_line_uom", context.version())
+    commands = []
+    for index, (values, item, unit) in enumerate(parsed):
+        values = dict(values)
+        values["product_id"] = resolve_product(context, item, f"lines[{index}]")
+        if unit:
+            values[uom_field] = _id_by(context, "uom.uom", [["name", "=", unit]], f"unit {unit}")
+        commands.append([0, 0, values])
     partner_id, partner_created = resolve_partner(context, inputs, progress)
     if reference:
         found = _same_document(
@@ -1090,14 +1188,6 @@ def order_op(context: Any, inputs: Mapping[str, Any], progress: Progress) -> dic
             return _order_result(
                 found, created=False, partner_created=partner_created, confirmed=confirmed
             )
-    uom_field = versions.name("sale_line_uom", context.version())
-    commands = []
-    for index, (values, item, unit) in enumerate(parsed):
-        values = dict(values)
-        values["product_id"] = resolve_product(context, item, f"lines[{index}]")
-        if unit:
-            values[uom_field] = _id_by(context, "uom.uom", [["name", "=", unit]], f"unit {unit}")
-        commands.append([0, 0, values])
     header: dict[str, Any] = {
         "partner_id": partner_id,
         "order_line": commands,
@@ -1317,7 +1407,17 @@ def prices_op(context: Any, inputs: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def changes_op(context: Any, inputs: Mapping[str, Any]) -> dict[str, Any]:
-    _allowed(inputs, {"entity", "since", "fields", "limit", "offset"})
+    """Records changed at or after ``since``, oldest first, with a resume cursor.
+
+    Odoo stores write_date with microseconds but reads it back to the second, and
+    orders one second's records by microsecond, not by id. A page therefore never
+    ends inside a second unless that one second fills it; then the second is read
+    in id order and ``next_after_id`` says where it stopped. When nothing more is
+    waiting, the cursor points at the start of the last second read, so the next
+    call may return that second's records again (match them by id) but never
+    misses one. Archived records are included (active_test is off).
+    """
+    _allowed(inputs, {"entity", "since", "after_id", "fields", "limit"})
     entity = text("entity", inputs.get("entity"), limit=40, required=True)
     model = CHANGE_MODELS.get(entity)
     if model is None:
@@ -1326,31 +1426,98 @@ def changes_op(context: Any, inputs: Mapping[str, Any]) -> dict[str, Any]:
     if not _SINCE_RE.fullmatch(since):
         raise invalid("since must be YYYY-MM-DD or YYYY-MM-DD HH:MM:SS (UTC)")
     try:
-        date.fromisoformat(since[:10])
+        moment = datetime.fromisoformat(since if " " in since else f"{since} 00:00:00")
     except ValueError as exc:
         raise invalid("since is not a valid date") from exc
+    after_id = _record_id(inputs, "after_id")
     known = require(context, model)
     fields = domain.field_list(inputs.get("fields"), known) or ["id", "display_name", "write_date"]
-    if "write_date" not in fields:
-        fields.append("write_date")
-    limit, offset = _paged(inputs)
-    rows = search_read(
-        context,
-        model,
-        [["write_date", ">", since if " " in since else f"{since} 00:00:00"]],
-        fields,
-        limit=limit,
-        offset=offset,
-        order="write_date asc, id asc",
+    for needed in ("id", "write_date"):
+        if needed not in fields:
+            fields.append(needed)
+    limit = whole("limit", inputs.get("limit"), default=PAGE, maximum=200)
+
+    def read(query: list[Any], order: str, size: int) -> list[dict[str, Any]]:
+        return search_read(
+            context,
+            model,
+            query,
+            fields,
+            limit=size,
+            order=order,
+            odoo_context={"active_test": False},
+        )
+
+    def one_second(second: datetime, after: int | None, size: int) -> list[dict[str, Any]]:
+        query: list[Any] = [
+            ["write_date", ">=", second.strftime(_ODOO_DATETIME)],
+            ["write_date", "<", (second + timedelta(seconds=1)).strftime(_ODOO_DATETIME)],
+        ]
+        if after is not None:
+            query.append(["id", ">", after])
+        return read(query, "id asc", size)
+
+    def page(
+        rows: list[dict[str, Any]], second: datetime | None, after: int | None, more: bool
+    ) -> dict[str, Any]:
+        return {
+            "model": model,
+            "records": rows,
+            "count": len(rows),
+            "has_more": more,
+            "next_since": second.strftime(_ODOO_DATETIME) if second is not None else None,
+            "next_after_id": after,
+        }
+
+    rows: list[dict[str, Any]] = []
+    start = moment
+    if after_id is not None:
+        first = one_second(moment, after_id, limit + 1)
+        if len(first) > limit:
+            rows = first[:limit]
+            return page(rows, moment, int(rows[-1]["id"]), True)
+        rows = first
+        start = moment + timedelta(seconds=1)
+    room = limit - len(rows)
+    later = read(
+        [["write_date", ">=", start.strftime(_ODOO_DATETIME)]], "write_date asc, id asc", room + 1
     )
-    has_more = len(rows) >= limit
-    return {
-        "model": model,
-        "records": rows,
-        "count": len(rows),
-        "has_more": has_more,
-        "next_offset": offset + len(rows) if has_more else None,
-    }
+    if room == 0:
+        # The rest of `since`'s second filled the page exactly; it is done.
+        return page(rows, start, None, bool(later))
+    if len(later) <= room:
+        if later:
+            return page(rows + later, _second_of(later[-1]) or start, None, False)
+        if rows:
+            return page(rows, moment, int(rows[-1]["id"]), False)
+        return page(rows, moment, after_id, False)
+    later = later[:room]
+    last = _second_of(later[-1])
+    if last is None:
+        raise ExtensionError(
+            errors.INVALID_RESPONSE,
+            f"Odoo's {model} records have no readable write_date",
+            definitely_no_external_effect=True,
+            external_effect_status="failed",
+        )
+    whole_seconds = [r for r in later if _second_of(r) != last]
+    if whole_seconds:
+        # Stop before the last second: the next call reads it from its start.
+        return page(rows + whole_seconds, last, None, True)
+    # One second fills the page: read it in id order and resume inside it.
+    inside = one_second(last, None, room)
+    rows += inside
+    return page(rows, last, int(inside[-1]["id"]) if inside else None, True)
+
+
+def _second_of(record: Mapping[str, Any]) -> datetime | None:
+    value = field(record, "write_date")
+    if not isinstance(value, str) or not _SINCE_RE.fullmatch(value[:19]):
+        return None
+    try:
+        return datetime.fromisoformat(value[:19])
+    except ValueError:
+        return None
 
 
 BALANCE_INPUTS = {"partner_id", "partner_ref", "partner_vat", "partner_email", "limit", "offset"}
@@ -1401,17 +1568,19 @@ def balance_op(context: Any, inputs: Mapping[str, Any]) -> dict[str, Any]:
         order="invoice_date_due asc, id asc",
     )
     today = date.today().isoformat()
-    receivable = payable = overdue = Decimal(0)
+    receivable = payable = overdue_receivable = overdue_payable = Decimal(0)
     documents = []
     for row in rows:
         signed = decimal_of(row, "amount_residual_signed") or Decimal(0)
-        if str(row.get("move_type", "")).startswith("out_"):
+        customer = str(row.get("move_type", "")).startswith("out_")
+        due = row.get("invoice_date_due") if isinstance(row.get("invoice_date_due"), str) else None
+        late = bool(due and due < today)
+        if customer:
             receivable += signed
+            overdue_receivable += signed if late else 0
         else:
             payable += signed
-        due = row.get("invoice_date_due") if isinstance(row.get("invoice_date_due"), str) else None
-        if due and due < today:
-            overdue += signed
+            overdue_payable += signed if late else 0
         documents.append(
             {
                 "id": row.get("id"),
@@ -1433,7 +1602,8 @@ def balance_op(context: Any, inputs: Mapping[str, Any]) -> dict[str, Any]:
         "payable": decimal_text(decimal_of(record, "debit")),
         "open_receivable": decimal_text(receivable),
         "open_payable": decimal_text(payable),
-        "overdue": decimal_text(overdue),
+        "overdue_receivable": decimal_text(overdue_receivable),
+        "overdue_payable": decimal_text(overdue_payable),
         "documents": documents,
         "count": len(documents),
         "complete": not has_more,
@@ -1485,6 +1655,9 @@ def validate(operation_id: str, inputs: Mapping[str, Any]) -> None:
         invoice_lines(inputs)
         _date(inputs, "invoice_date")
         _date(inputs, "due_date")
+        currency = text("currency_code", inputs.get("currency_code"), limit=3)
+        if currency and not _CURRENCY_RE.fullmatch(currency):
+            raise invalid("currency_code must be a three-letter code such as EUR")
         if _record_id(inputs, "partner_id") is None and not _partner_identifiers(
             inputs, "partner_"
         ):

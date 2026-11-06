@@ -17,7 +17,17 @@ First release.
   sources of each version and against live Odoo 16, 17, 18, 19 and 20 databases.
 - Every write is a declared external effect, suppressed in test runs; ambiguous outcomes of
   business methods are reported as unknown and not retried; everyday steps look up before they
-  create.
+  create. Products, taxes, currencies and units are looked up before a partner is created; a
+  step that fails after a write names what it already did in Odoo.
+- Register payment treats a payment as a rerun only when it has the same memo, date, amount,
+  currency and direction and is linked to this invoice; a payment of another invoice never
+  stops this one from being paid.
+- Changes since resumes with a (next_since, next_after_id) cursor that skips no record, and
+  includes archived records;
+  Partner balance reports overdue receivable and payable apart.
+- Group and total accepts date grouping such as `invoice_date:month`.
+- On XML-RPC, `null` values are sent as `false`; numbers that do not fit in 32 bits are refused
+  before sending.
 - Not offered: the computed pricelist price (private in Odoo), private methods, the database
   service.
 - Icon: the official Odoo icon from the odoo/odoo repository

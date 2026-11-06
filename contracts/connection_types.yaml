@@ -8,6 +8,18 @@ connection_types:
       type: object
       additionalProperties: false
       required: [base_url]
+      if:
+        required: [api]
+        properties:
+          api:
+            const: xmlrpc
+      then:
+        required: [database, login]
+        properties:
+          database:
+            minLength: 1
+          login:
+            minLength: 1
       properties:
         label:
           type: string
@@ -46,6 +58,7 @@ connection_types:
         language:
           type: string
           maxLength: 12
+          pattern: "^([a-z]{2,3}(_[A-Z]{2})?(@[a-z]+)?)?$"
           title: Language
           description: Optional Odoo language code for names and messages, for example lt_LT.
     secret_schema:

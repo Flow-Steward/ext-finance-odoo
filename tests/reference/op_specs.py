@@ -402,7 +402,8 @@ def operations() -> list[dict[str, Any]]:
             "description": (
                 "Pays a posted invoice or bill in full or in part with Odoo's payment wizard, which "
                 "creates, posts and reconciles the payment. An invoice already paid, or the same payment "
-                "(memo, amount, date) found again, is not paid twice."
+                "(memo, amount, date) found again, is not paid twice. Without a memo a partial "
+                "payment run again is registered again."
             ),
             "inputs": [
                 CONNECTION,
@@ -567,7 +568,12 @@ def operations() -> list[dict[str, Any]]:
             "display_name": "Changes since",
             "kind": "source",
             "calls": ["<model> search_read on write_date"],
-            "description": "Records of one kind changed after a moment (write_date), oldest first.",
+            "description": (
+                "Records of one kind changed at or after a moment (write_date), oldest first, "
+                "archived ones included. To continue, pass next_since as since and next_after_id "
+                "as after_id: no record is skipped. The last second read may come again on the "
+                "next call; match records by id."
+            ),
             "inputs": [
                 CONNECTION,
                 choice(
@@ -580,21 +586,37 @@ def operations() -> list[dict[str, Any]]:
                 text(
                     "since",
                     "Since",
-                    "YYYY-MM-DD or YYYY-MM-DD HH:MM:SS, in UTC.",
+                    "YYYY-MM-DD or YYYY-MM-DD HH:MM:SS, in UTC. Records changed at this moment are included.",
                     required=True,
                     maxLength=19,
                     pattern=r"^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}:\d{2})?$",
                 ),
+                whole(
+                    "after_id",
+                    "After id",
+                    "Pass next_after_id from the previous call, with its next_since as since.",
+                    minimum=1,
+                ),
                 FIELDS,
                 LIMIT,
-                OFFSET,
             ],
             "outputs": [
                 out("model", "text", "string"),
                 RECORDS,
                 out("count", "integer", "integer"),
                 out("has_more", "boolean", "boolean"),
-                out("next_offset", "integer", ["integer", "null"]),
+                out(
+                    "next_since",
+                    "text",
+                    ["string", "null"],
+                    "Pass it as since to continue.",
+                ),
+                out(
+                    "next_after_id",
+                    "integer",
+                    ["integer", "null"],
+                    "Pass it as after_id to continue; null means leave after_id empty.",
+                ),
             ],
         },
         {
@@ -624,15 +646,26 @@ def operations() -> list[dict[str, Any]]:
                     "open_receivable",
                     "text",
                     ["string", "null"],
-                    "Due on the open customer documents read.",
+                    "Due on the open customer documents on this page only.",
                 ),
                 out(
                     "open_payable",
                     "text",
                     ["string", "null"],
-                    "Due on the open vendor documents read.",
+                    "Due on the open vendor documents on this page only.",
                 ),
-                out("overdue", "text", ["string", "null"], "The part past its due date."),
+                out(
+                    "overdue_receivable",
+                    "text",
+                    ["string", "null"],
+                    "The customer part past its due date, on this page only.",
+                ),
+                out(
+                    "overdue_payable",
+                    "text",
+                    ["string", "null"],
+                    "The vendor part past its due date, on this page only.",
+                ),
                 out(
                     "documents",
                     "array",

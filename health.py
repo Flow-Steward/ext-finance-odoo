@@ -6,6 +6,9 @@ import json
 
 
 def check_health() -> dict[str, object]:
+    # The XML-RPC transport needs defusedxml; a missing dependency is unhealthy.
+    import defusedxml.xmlrpc  # noqa: F401
+
     from runtime.catalog import OPERATION_IDS, WRITE_OPERATION_IDS
     from runtime.versions import SUPPORTED
 

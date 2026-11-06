@@ -842,7 +842,7 @@ operations:
   display_name: Register payment
   description: Pays a posted invoice or bill in full or in part with Odoo's payment wizard, which creates,
     posts and reconciles the payment. An invoice already paid, or the same payment (memo, amount, date)
-    found again, is not paid twice.
+    found again, is not paid twice. Without a memo a partial payment run again is registered again.
   operation_kind: action
   category: finance
   connection_type_ids:
@@ -1354,7 +1354,9 @@ operations:
   - blocked_address
 - operation_id: changes_since
   display_name: Changes since
-  description: Records of one kind changed after a moment (write_date), oldest first.
+  description: 'Records of one kind changed at or after a moment (write_date), oldest first, archived
+    ones included. To continue, pass next_since as since and next_after_id as after_id: no record is skipped.
+    The last second read may come again on the next call; match records by id.'
   operation_kind: source
   category: finance
   connection_type_ids:
@@ -1382,9 +1384,18 @@ operations:
     schema:
       type: string
       title: Since
-      description: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS, in UTC.
+      description: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS, in UTC. Records changed at this moment are included.
       maxLength: 19
       pattern: ^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}:\d{2})?$
+  - name: after_id
+    value_type: integer
+    required: false
+    schema:
+      type: integer
+      minimum: 1
+      maximum: 1000000000
+      title: After id
+      description: Pass next_after_id from the previous call, with its next_since as since.
   - &id012
     name: fields
     value_type: array
@@ -1398,7 +1409,6 @@ operations:
       items:
         type: string
   - *id009
-  - *id010
   outputs:
   - name: model
     value_type: text
@@ -1418,18 +1428,27 @@ operations:
     value_type: boolean
     schema:
       type: boolean
-  - name: next_offset
+  - name: next_since
+    value_type: text
+    schema:
+      type:
+      - string
+      - 'null'
+      description: Pass it as since to continue.
+  - name: next_after_id
     value_type: integer
     schema:
       type:
       - integer
       - 'null'
+      description: Pass it as after_id to continue; null means leave after_id empty.
   result_fields:
   - result.model
   - result.records
   - result.count
   - result.has_more
-  - result.next_offset
+  - result.next_since
+  - result.next_after_id
   error_codes:
   - invalid_payload
   - invalid_host_envelope
@@ -1501,21 +1520,28 @@ operations:
       type:
       - string
       - 'null'
-      description: Due on the open customer documents read.
+      description: Due on the open customer documents on this page only.
   - name: open_payable
     value_type: text
     schema:
       type:
       - string
       - 'null'
-      description: Due on the open vendor documents read.
-  - name: overdue
+      description: Due on the open vendor documents on this page only.
+  - name: overdue_receivable
     value_type: text
     schema:
       type:
       - string
       - 'null'
-      description: The part past its due date.
+      description: The customer part past its due date, on this page only.
+  - name: overdue_payable
+    value_type: text
+    schema:
+      type:
+      - string
+      - 'null'
+      description: The vendor part past its due date, on this page only.
   - name: documents
     value_type: array
     schema:
@@ -1543,7 +1569,8 @@ operations:
   - result.payable
   - result.open_receivable
   - result.open_payable
-  - result.overdue
+  - result.overdue_receivable
+  - result.overdue_payable
   - result.documents
   - result.count
   - result.complete
