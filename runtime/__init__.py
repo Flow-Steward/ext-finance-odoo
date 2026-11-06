@@ -1,0 +1,1 @@
+"""Odoo extension runtime."""

@@ -1,0 +1,7 @@
+__pycache__/
+.pytest_cache/
+dist/
+.fs-python/
+logs/
+.mypy_cache/
+.ruff_cache/

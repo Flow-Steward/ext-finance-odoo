@@ -1,0 +1,136 @@
+manifest_version: 2
+lifecycle:
+  data_schema_version: 1
+  data_migrations: []
+extension_id: flowsteward.odoo
+kind: tool_provider
+version: 0.1.0
+release_stage: active
+billing_mode: free
+display_name: Odoo
+description: Odoo 16 to 20 for workflows, through Odoo's external API (JSON-2 or XML-RPC). Everyday steps
+  — find or create partners and products, customer invoices and vendor bills with attachments, payments,
+  sale orders, stock levels, prices, partner balances, changes since a date — plus search, read, group,
+  create, update, delete and method calls on any model.
+vendor:
+  name: Flow Steward
+  support_url: https://github.com/Flow-Steward/ext-erp-odoo/issues
+  website_url: https://github.com/Flow-Steward/ext-erp-odoo
+listing:
+  category: finance
+  tags:
+  - odoo
+  - erp
+  - accounting
+  - invoices
+  - crm
+  - inventory
+  - sales
+  summary: Everyday Odoo steps — partners, products, invoices, bills, payments, sale orders, stock — plus
+    any model, on Odoo 16 to 20.
+  categories:
+  - finance
+  - sales
+  - inventory
+  - crm
+features:
+- tool
+- action
+required_scopes:
+- extension:invoke
+- artifact:read
+- artifact:write
+machine_auth:
+  service_account_key: svc_ext_odoo
+  required_scopes:
+  - extension:invoke
+  - artifact:read
+  - artifact:write
+account_scope:
+  scope_type: project
+  description: Each Odoo database and API key is a project connection. A project may hold several, for
+    example one per company or database.
+egress:
+  connection_fields:
+  - odoo.base_url
+external_effects:
+- operation_id: find_or_create_partner
+  effect_kind: odoo_find_or_create_partner
+  channel: odoo_external_api
+  idempotency: required
+  test_mode_behavior: suppress
+- operation_id: find_or_create_product
+  effect_kind: odoo_find_or_create_product
+  channel: odoo_external_api
+  idempotency: required
+  test_mode_behavior: suppress
+- operation_id: create_customer_invoice
+  effect_kind: odoo_create_customer_invoice
+  channel: odoo_external_api
+  idempotency: required
+  test_mode_behavior: suppress
+- operation_id: create_vendor_bill
+  effect_kind: odoo_create_vendor_bill
+  channel: odoo_external_api
+  idempotency: required
+  test_mode_behavior: suppress
+- operation_id: register_payment
+  effect_kind: odoo_register_payment
+  channel: odoo_external_api
+  idempotency: required
+  test_mode_behavior: suppress
+- operation_id: create_sale_order
+  effect_kind: odoo_create_sale_order
+  channel: odoo_external_api
+  idempotency: required
+  test_mode_behavior: suppress
+- operation_id: attach_file
+  effect_kind: odoo_attach_file
+  channel: odoo_external_api
+  idempotency: required
+  test_mode_behavior: suppress
+- operation_id: create_record
+  effect_kind: odoo_create_record
+  channel: odoo_external_api
+  idempotency: required
+  test_mode_behavior: suppress
+- operation_id: update_records
+  effect_kind: odoo_update_records
+  channel: odoo_external_api
+  idempotency: required
+  test_mode_behavior: suppress
+- operation_id: delete_records
+  effect_kind: odoo_delete_records
+  channel: odoo_external_api
+  idempotency: required
+  test_mode_behavior: suppress
+- operation_id: call_method
+  effect_kind: odoo_call_method
+  channel: odoo_external_api
+  idempotency: required
+  test_mode_behavior: suppress
+runtime:
+  contract_version: extension_host_v2
+  extension_contract_v2:
+    connection_types: contracts/connection_types.yaml
+    operation_manifest: contracts/operation_manifest.yaml
+    step_ui_manifest: contracts/step_ui_manifest.yaml
+    artifact_policies: contracts/artifact_policies.yaml
+entrypoint:
+  mode: subprocess
+  command:
+  - python3
+  - main.py
+  timeout_seconds: 600
+health:
+  command:
+  - python3
+  - health.py
+  timeout_seconds: 5
+ui_manifest: ui/ui_manifest.yaml
+action_manifest: ui/actions/actions.yaml
+python_requirements:
+- name: defusedxml
+  version: 0.7.1
+  hashes:
+  - sha256:a352e7e428770286cc899e2542b6cdaedb2b4953ff269a210103ec58f6198a61

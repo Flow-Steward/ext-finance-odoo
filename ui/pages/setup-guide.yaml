@@ -1,0 +1,29 @@
+page_id: setup-guide
+title: Setup Guide
+description: How to get an Odoo API key and connect it — about a minute to read.
+components:
+  - component_id: setup_odoo
+    type: markdown
+    title: For the person who administers Odoo
+    body: |
+      1. **Check the plan (Odoo Online).** Odoo gives API access on Odoo Online only on the **Custom** plan, not on One App Free or Standard. Odoo.sh and your own servers have it.
+      2. **Pick the user the steps run as.** Odoo recommends a dedicated user for integrations, with only the rights the workflows need: the steps can do exactly what that user can do.
+      3. **Create the API key** while logged in as that user: **Preferences** (or My Profile) → **Account Security** → **New API Key**.
+         - Odoo 16 and 17 ask for a description.
+         - Odoo 18, 19 and 20 also ask for a duration: the key stops working after it. Odoo 19 and 20 cap it by the user's role.
+         - Copy the key at once: Odoo shows it only once.
+      4. **Note the details** the person connecting needs:
+         - the address you open Odoo at, for example `https://mycompany.odoo.com`;
+         - the Odoo version (16, 17, 18, 19 or 20);
+         - for Odoo 16 to 18: the database name (on Odoo Online, the part before `.odoo.com`) and the user's login.
+
+      [Odoo: external API (Odoo 19+)](https://www.odoo.com/documentation/19.0/developer/reference/external_api.html) · [Odoo: external API (Odoo 16-18)](https://www.odoo.com/documentation/18.0/developer/reference/external_api.html)
+  - component_id: setup_flow_steward
+    type: markdown
+    title: For the person who connects in Flow Steward
+    body: |
+      1. Open **Connection** and add a connection. Name it after the company, for example `UAB X`.
+      2. Enter the Odoo address and choose the API: **JSON-2** for Odoo 19 and 20, **XML-RPC** for Odoo 16, 17 and 18.
+      3. For XML-RPC, also enter the database and the login.
+      4. Paste the API key, save and press **Test connection**. It reports the Odoo version it found.
+      5. In a workflow, add an Odoo step and pick this connection. Start with the everyday steps on **Odoo API**.

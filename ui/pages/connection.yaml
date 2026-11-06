@@ -1,0 +1,93 @@
+page_id: connection
+title: Connection
+description: Add and test the Odoo database and API key.
+components:
+  - component_id: odoo_connections
+    type: connection_form
+    title: Odoo databases
+    description: Add one connection per Odoo database and API key, then test it. The key is stored encrypted and never shown again.
+    data:
+      connection_kind: extension
+      connection_type: odoo
+      config_fields: [label, base_url, api, database, login, odoo_version, language]
+      secret_fields: [api_key]
+      test_action: test_connection
+    defaults:
+      label: ''
+      base_url: ''
+      api: json2
+      database: ''
+      login: ''
+      odoo_version: auto
+      language: ''
+    fields:
+      - path: label
+        widget: text
+        label: Label
+        placeholder: UAB X
+      - path: base_url
+        widget: text
+        label: Odoo address
+        placeholder: https://mycompany.odoo.com
+        required: true
+        help: The address you open Odoo at, https only, without a path.
+      - path: api
+        widget: select
+        label: API
+        help: JSON-2 for Odoo 19 and 20; XML-RPC for Odoo 16, 17 and 18.
+        options:
+          - label: JSON-2 (Odoo 19 and 20)
+            value: json2
+          - label: XML-RPC (Odoo 16 to 20)
+            value: xmlrpc
+      - path: database
+        widget: text
+        label: Database
+        help: Needed for XML-RPC. On Odoo Online, the part before .odoo.com.
+      - path: login
+        widget: text
+        label: Login
+        help: The API key user's login. Needed for XML-RPC.
+      - path: api_key
+        widget: secret
+        label: API key
+        help: From Odoo, Preferences → Account Security → New API Key.
+        required: true
+      - path: odoo_version
+        widget: select
+        label: Odoo version
+        help: Auto reads it from the server.
+        options:
+          - label: Auto
+            value: auto
+          - label: Odoo 16
+            value: "16"
+          - label: Odoo 17
+            value: "17"
+          - label: Odoo 18
+            value: "18"
+          - label: Odoo 19
+            value: "19"
+          - label: Odoo 20
+            value: "20"
+      - path: language
+        widget: text
+        label: Language
+        placeholder: lt_LT
+        help: Optional. Odoo's language code for names and messages.
+    ui_schema:
+      actions:
+        test_label: Test connection
+  - component_id: connection_api_key
+    type: markdown
+    title: How to get the API key
+    body: |
+      1. In Odoo, log in as the user the workflows should run as.
+      2. Open **Preferences** → **Account Security** → **New API Key**, give it a description (and, from Odoo 18, a duration) and confirm with the password.
+      3. Copy the key — Odoo shows it only once — paste it above and press **Test connection**.
+
+      **If the test fails:**
+
+      - **Authentication failed** — the key is wrong, expired or revoked; for XML-RPC also check the database and login.
+      - **Not found** — check the address, and the API: JSON-2 needs Odoo 19 or later.
+      - **Connection failed or blocked address** — the address must be reachable from the internet over https.

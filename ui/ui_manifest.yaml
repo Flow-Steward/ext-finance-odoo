@@ -1,0 +1,6 @@
+version: "1"
+pages:
+  - ref: pages/setup-guide.yaml
+  - ref: pages/connection.yaml
+  - ref: pages/odoo-api.yaml
+  - ref: pages/changelog.yaml

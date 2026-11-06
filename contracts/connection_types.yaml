@@ -1,0 +1,63 @@
+connection_types:
+  - connection_type_id: odoo
+    display_name: Odoo database
+    description: One Odoo database (Odoo Online, Odoo.sh or your own server) and the API key of the user the steps run as.
+    auth:
+      type: api_key
+    config_schema:
+      type: object
+      additionalProperties: false
+      required: [base_url]
+      properties:
+        label:
+          type: string
+          maxLength: 190
+          title: Label
+          description: Optional name for this connection, for example the company.
+        base_url:
+          type: string
+          maxLength: 300
+          pattern: "^https://[^/?#@ ]+/?$"
+          title: Odoo address
+          description: The address you open Odoo at, for example https://mycompany.odoo.com. https only, without a path.
+        api:
+          type: string
+          enum: [json2, xmlrpc]
+          default: json2
+          title: API
+          description: json2 for Odoo 19 and later; xmlrpc for Odoo 16, 17 and 18 (also works on 19 and 20).
+        database:
+          type: string
+          maxLength: 63
+          pattern: "^[A-Za-z0-9_.-]*$"
+          title: Database
+          description: The database name. Needed for XML-RPC; for JSON-2 only when the server hosts several databases. On Odoo Online it is the part before .odoo.com.
+        login:
+          type: string
+          maxLength: 200
+          title: Login
+          description: The login (usually the e-mail) of the API key's user. Needed for XML-RPC.
+        odoo_version:
+          type: string
+          enum: [auto, "16", "17", "18", "19", "20"]
+          default: auto
+          title: Odoo version
+          description: auto reads it from the server; set it to skip that read.
+        language:
+          type: string
+          maxLength: 12
+          title: Language
+          description: Optional Odoo language code for names and messages, for example lt_LT.
+    secret_schema:
+      type: object
+      additionalProperties: false
+      required: [api_key]
+      properties:
+        api_key:
+          type: string
+          minLength: 8
+          maxLength: 512
+          title: API key
+          description: The key created in Odoo under Preferences → Account Security → New API Key. Shown only once.
+    capabilities:
+      test_connection: true
