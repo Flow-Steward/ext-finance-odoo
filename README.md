@@ -71,8 +71,3 @@ EXT=$PWD/workspace/extensions/flowsteward_odoo
 ```
 
 The live tests (`tests/live/`) are skipped unless `ODOO_LIVE_URL` is set; see the module docstring.
-
-## Icon
-
-`icon.png` is the Odoo icon, © Odoo S.A., used to identify the integration. Source: the odoo/odoo
-repository, `addons/web/static/img/odoo-icon-192x192.png`, scaled to 128×128.
