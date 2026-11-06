@@ -53,22 +53,6 @@ Odoo 18+ also asks for a duration. The key is shown once. On Odoo Online, API ac
 - XML-RPC answers are parsed with defusedxml (DTDs and entities refused) and sent through the
   SDK's pinned opener; the server address must be https and a public host name.
 
-## Assumptions
-
-1. Version-specific names come from `runtime/versions.py`, checked against the odoo/odoo sources of
-   16.0 to 20.0 and against live databases (see `tests/live/RESULTS.md`). Odoo Online "saas~19.x"
-   servers are treated as 19.
-2. XML-RPC has no null: `null` in values is sent as `false`, Odoo's empty value; numbers must
-   fit in 32 bits. An XML-RPC fault "cannot marshal None" means the method succeeded and returned nothing: Odoo
-   encodes the answer after the transaction committed (`odoo/addons/base/controllers/rpc.py`).
-3. The computed pricelist price is not available: Odoo computes it in private methods.
-4. `write_date` is stored with microseconds but read back to the second (checked in the
-   databases of 16 to 20). Changes since therefore never ends a page inside a second unless that
-   second alone fills it, and then reads it in id order; the last second read may be returned
-   again, never skipped.
-5. Find or create partner / product report `succeeded` even when they only found a record: Core
-   has no "success without effect" status an extension may report.
-
 ## Development
 
 From the extension folder:
