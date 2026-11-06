@@ -29,13 +29,25 @@ jobs:
     needs: ci
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist
+      - name: Release notes from CHANGELOG.md
+        # The section "## <version> — <date>" up to the next "## ", then the changelog link.
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v v="$version" '
+            /^## / { inside = (index($0, "## " v " ") == 1) ; next }
+            inside { print }
+          ' CHANGELOG.md > notes.md
+          test -s notes.md || { echo "::error::CHANGELOG.md has no section for ${version}"; exit 1; }
+          printf '\n**Full Changelog**: %s/%s/commits/%s\n' \
+            "${GITHUB_SERVER_URL}" "${GITHUB_REPOSITORY}" "${GITHUB_REF_NAME}" >> notes.md
       - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: >
           gh release create "${GITHUB_REF_NAME}" dist/*.zip
-          --repo "${GITHUB_REPOSITORY}" --title "${GITHUB_REF_NAME}" --generate-notes
+          --repo "${GITHUB_REPOSITORY}" --title "${GITHUB_REF_NAME}" --notes-file notes.md
