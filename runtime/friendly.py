@@ -22,7 +22,7 @@ from datetime import date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any
 
-from . import domain, errors, versions
+from . import catalog, domain, errors, versions
 from .errors import ExtensionError
 from .fields import field
 from .inputs import flag, invalid, text, whole
@@ -1618,6 +1618,10 @@ def balance_op(context: Any, inputs: Mapping[str, Any]) -> dict[str, Any]:
 def run(context: Any, operation_id: str) -> dict[str, Any]:
     inputs = {k: v for k, v in context.operation_input.items() if k != "connection_ref"}
     progress = Progress()
+    if operation_id in catalog.FRIENDLY_WRITE_IDS:
+        # Settle the server version (a read) before the first write: several
+        # steps choose field names by version only after they have written.
+        context.version()
     if operation_id == "find_or_create_partner":
         return partner_op(context, inputs, progress)
     if operation_id == "find_or_create_product":

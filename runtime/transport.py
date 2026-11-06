@@ -157,6 +157,8 @@ class OdooTransport:
         self.attempted = False
         #: True once a mutating request may have left this process.
         self.mutated = False
+        #: True once Odoo answered a mutating request successfully (it committed).
+        self.committed = False
         #: Monotonic time after which no request may start (set by the operation).
         self.deadline: float | None = None
         self._call_timeout = timeout_seconds
@@ -194,8 +196,13 @@ class OdooTransport:
             context.setdefault("lang", self.connection.language)
             arguments["context"] = context
         if self.connection.api == "json2":
-            return self._json2(model, method, ids, arguments, mutating=mutating, risky=risky)
-        return self._execute_kw(model, method, ids, arguments, mutating=mutating, risky=risky)
+            answer = self._json2(model, method, ids, arguments, mutating=mutating, risky=risky)
+        else:
+            answer = self._execute_kw(model, method, ids, arguments, mutating=mutating, risky=risky)
+        if mutating:
+            # Odoo committed this change: nothing later in the step may claim "no effect".
+            self.committed = True
+        return answer
 
     def version(self) -> dict[str, Any]:
         """Server version, unauthenticated (``/web/webclient/version_info``, 16-20)."""

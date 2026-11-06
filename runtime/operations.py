@@ -125,6 +125,19 @@ def handle_runtime(
         )
     except ExtensionError as exc:
         _mark_unsent(exc, transport)
+        if transport is not None and transport.committed and exc.definitely_no_external_effect:
+            # Backstop for every composite step: a change Odoo already committed
+            # cannot be reported as "nothing happened", whatever failed after it.
+            return error_response(
+                errors.TIMEOUT_UNKNOWN,
+                f"{exc.message}. A change was already saved in Odoo before this failed; "
+                "check Odoo before running the step again",
+                retry_facts={
+                    "definitely_no_external_effect": False,
+                    "external_effect_status": "timeout_unknown",
+                },
+                data_errors=exc.data_errors,
+            )
         return error_response(
             exc.code, exc.message, retry_facts=exc.retry_facts(), data_errors=exc.data_errors
         )

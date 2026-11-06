@@ -151,3 +151,85 @@ def test_linked_payment_in_the_other_direction_is_not_a_rerun() -> None:
     after = [{"payment_state": "paid", "amount_residual": 0}]
     _opener, response = _pay_with_memo([refund], (200, [7]), (200, None), (200, after))
     assert response["result"]["created"] is True
+
+
+# Recheck (audit-artifacts/odoo-review/RECHECK.md): with odoo_version=auto the
+# attachment step read the server version only after the invoice was saved.
+
+VERSION_19 = {"result": {"server_version_info": [19, 0, 0, "final", 0, ""]}}
+
+
+def test_version_is_read_before_the_invoice_is_saved(monkeypatch: Any) -> None:
+    monkeypatch.setattr(operations, "read_input_file", lambda *_: (b"file", "invoice.pdf"))
+    opener = Opener((403, DENIED))
+    response = run(
+        opener,
+        "create_customer_invoice",
+        {
+            "partner_id": 5,
+            "document_file": "artifact",
+            "lines": [{"description": "Work", "price_unit": 10}],
+        },
+        version="auto",
+    )
+    assert paths(opener) == ["/web/webclient/version_info"]
+    assert response["ok"] is False
+    assert response["definitely_no_external_effect"] is True
+
+
+def test_auto_version_invoice_with_attachment_succeeds(monkeypatch: Any) -> None:
+    monkeypatch.setattr(operations, "read_input_file", lambda *_: (b"file", "invoice.pdf"))
+    move = {"id": 9, "name": "INV/1", "state": "draft", "partner_id": [5, "P"]}
+    opener = Opener(
+        (200, VERSION_19),
+        (200, {"message_main_attachment_id": {}}),
+        (200, [9]),
+        (200, [31]),
+        (200, True),
+        (200, [move]),
+    )
+    response = run(
+        opener,
+        "create_customer_invoice",
+        {
+            "partner_id": 5,
+            "document_file": "artifact",
+            "lines": [{"description": "Work", "price_unit": 10}],
+        },
+        version="auto",
+    )
+    assert response["ok"] is True, response
+    assert response["result"]["attachment_id"] == 31
+    assert paths(opener)[0] == "/web/webclient/version_info"
+
+
+def test_any_failure_after_a_saved_change_is_unknown(monkeypatch: Any) -> None:
+    # Backstop: whatever fails after Odoo committed a write, even outside Progress,
+    # the step never reports "no effect".
+    from runtime import errors, friendly
+    from runtime.errors import ExtensionError
+
+    def broken_attach(*_a: Any, **_k: Any) -> int:
+        raise ExtensionError(
+            errors.ACCESS_DENIED,
+            "Denied",
+            definitely_no_external_effect=True,
+            external_effect_status="failed",
+        )
+
+    monkeypatch.setattr(operations, "read_input_file", lambda *_: (b"file", "invoice.pdf"))
+    monkeypatch.setattr(friendly, "attach", broken_attach)
+    opener = Opener((200, {}), (200, [9]))
+    response = run(
+        opener,
+        "create_customer_invoice",
+        {
+            "partner_id": 5,
+            "document_file": "artifact",
+            "lines": [{"description": "Work", "price_unit": 10}],
+        },
+    )
+    assert "/json/2/account.move/create" in paths(opener)
+    assert response["ok"] is False
+    assert response["definitely_no_external_effect"] is False
+    assert response["external_effect_status"] == "timeout_unknown"
