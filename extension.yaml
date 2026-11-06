@@ -14,8 +14,8 @@ description: Odoo 16 to 20 for workflows, through Odoo's external API (JSON-2 or
   create, update, delete and method calls on any model.
 vendor:
   name: Flow Steward
-  support_url: https://github.com/Flow-Steward/ext-erp-odoo/issues
-  website_url: https://github.com/Flow-Steward/ext-erp-odoo
+  support_url: https://github.com/Flow-Steward/ext-finance-odoo/issues
+  website_url: https://github.com/Flow-Steward/ext-finance-odoo
 listing:
   category: finance
   tags:
