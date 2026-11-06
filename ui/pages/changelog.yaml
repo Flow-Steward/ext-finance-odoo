@@ -8,6 +8,22 @@ components:
   type: markdown
   title: Release history
   body: |
+    ## 0.1.1 — 2026-11-06
+
+    ### Fixed
+
+    - Create customer invoice and Create vendor bill with an attached file, on a connection whose Odoo
+      version is "auto": the server version is now read before anything is written. Before, a failing
+      version read after the invoice was saved was reported as "nothing changed".
+    - Once Odoo has saved a change in a step, no later error in that step reports "nothing changed":
+      it is an unknown outcome, so the step is not retried blindly.
+
+    ### Changed
+
+    - README: internal working notes and the icon note removed.
+    - Releases: the release text is this version's section of the changelog, checked before anything is built,
+      followed by GitHub's list of changes since the previous release.
+
     ## 0.1.0 — 2026-11-06
 
     First release.

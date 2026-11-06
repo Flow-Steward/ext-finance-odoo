@@ -163,7 +163,7 @@ def test_api_page_documents_every_operation(built) -> None:
 
 def test_manifest_basics() -> None:
     manifest = _load("extension.yaml")
-    assert manifest["extension_id"] == "flowsteward.odoo" and manifest["version"] == "0.1.0"
+    assert manifest["extension_id"] == "flowsteward.odoo" and manifest["version"] == "0.1.1"
     assert manifest["egress"] == {"connection_fields": ["odoo.base_url"]}
     categories = json.loads((BUNDLE_ROOT / "tests/reference/categories.json").read_text("utf-8"))
     assert manifest["listing"]["category"] == "finance"
