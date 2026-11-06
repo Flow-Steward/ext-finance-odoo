@@ -1,0 +1,115 @@
+extension commit 70d0f6c632d894c8aec58d62ef12d7fb2836cad1 clean=0
+date 2026-11-06T13:48:22Z
+IMAGE=odoo:16.0 odoo@sha256:0f36a5002a200bb1649771c2cb9403ca5392d7ac4bb23f9ad500b339df3f5a3a
+IMAGE=postgres:15 postgres@sha256:1149d80408a63791782d07a0e2bd3b06a7adbcdc86e8dcc18d6ee01bacfe04ab
+=== Odoo 16 xmlrpc
+tests/live/test_live_odoo.py::test_01_connection PASSED                  [  9%]
+tests/live/test_live_odoo.py::test_02_generic_round_trip PASSED          [ 18%]
+tests/live/test_live_odoo.py::test_03_partner PASSED                     [ 27%]
+tests/live/test_live_odoo.py::test_04_product PASSED                     [ 36%]
+tests/live/test_live_odoo.py::test_05_customer_invoice_attach_post_and_rerun PASSED [ 45%]
+tests/live/test_live_odoo.py::test_06_register_payment_and_rerun PASSED  [ 54%]
+tests/live/test_live_odoo.py::test_07_vendor_bill PASSED                 [ 63%]
+tests/live/test_live_odoo.py::test_08_sale_order PASSED                  [ 72%]
+tests/live/test_live_odoo.py::test_09_reads PASSED                       [ 81%]
+tests/live/test_live_odoo.py::test_10_files_and_export PASSED            [ 90%]
+tests/live/test_live_odoo.py::test_11_changes_since_skips_nothing PASSED [100%]
+============================= 11 passed in 44.86s ==============================
+--- write_date rows with microseconds / all res_partner rows, Odoo 16
+43|43
+IMAGE=odoo:17.0 odoo@sha256:8779f8157ddcc37b84014c94646073f46fd4ad776b7a5d95fc3b0dc73a24a8fa
+IMAGE=postgres:15 postgres@sha256:1149d80408a63791782d07a0e2bd3b06a7adbcdc86e8dcc18d6ee01bacfe04ab
+=== Odoo 17 xmlrpc
+tests/live/test_live_odoo.py::test_01_connection PASSED                  [  9%]
+tests/live/test_live_odoo.py::test_02_generic_round_trip PASSED          [ 18%]
+tests/live/test_live_odoo.py::test_03_partner PASSED                     [ 27%]
+tests/live/test_live_odoo.py::test_04_product PASSED                     [ 36%]
+tests/live/test_live_odoo.py::test_05_customer_invoice_attach_post_and_rerun PASSED [ 45%]
+tests/live/test_live_odoo.py::test_06_register_payment_and_rerun PASSED  [ 54%]
+tests/live/test_live_odoo.py::test_07_vendor_bill PASSED                 [ 63%]
+tests/live/test_live_odoo.py::test_08_sale_order PASSED                  [ 72%]
+tests/live/test_live_odoo.py::test_09_reads PASSED                       [ 81%]
+tests/live/test_live_odoo.py::test_10_files_and_export PASSED            [ 90%]
+tests/live/test_live_odoo.py::test_11_changes_since_skips_nothing PASSED [100%]
+============================= 11 passed in 49.08s ==============================
+--- write_date rows with microseconds / all res_partner rows, Odoo 17
+43|43
+IMAGE=odoo:18.0 odoo@sha256:f61d3e36eb699e63557bbcdf4d7bd659e51418c326009e6574565d87e1d9026d
+IMAGE=postgres:15 postgres@sha256:1149d80408a63791782d07a0e2bd3b06a7adbcdc86e8dcc18d6ee01bacfe04ab
+=== Odoo 18 xmlrpc
+tests/live/test_live_odoo.py::test_01_connection PASSED                  [  9%]
+tests/live/test_live_odoo.py::test_02_generic_round_trip PASSED          [ 18%]
+tests/live/test_live_odoo.py::test_03_partner PASSED                     [ 27%]
+tests/live/test_live_odoo.py::test_04_product PASSED                     [ 36%]
+tests/live/test_live_odoo.py::test_05_customer_invoice_attach_post_and_rerun PASSED [ 45%]
+tests/live/test_live_odoo.py::test_06_register_payment_and_rerun PASSED  [ 54%]
+tests/live/test_live_odoo.py::test_07_vendor_bill PASSED                 [ 63%]
+tests/live/test_live_odoo.py::test_08_sale_order PASSED                  [ 72%]
+tests/live/test_live_odoo.py::test_09_reads PASSED                       [ 81%]
+tests/live/test_live_odoo.py::test_10_files_and_export PASSED            [ 90%]
+tests/live/test_live_odoo.py::test_11_changes_since_skips_nothing PASSED [100%]
+============================= 11 passed in 49.06s ==============================
+--- write_date rows with microseconds / all res_partner rows, Odoo 18
+44|44
+IMAGE=odoo:19.0 odoo@sha256:5e755c725b3c43cf0be16d579904e1418300db3a2c44952f928eaddbcb0cc16d
+IMAGE=postgres:15 postgres@sha256:1149d80408a63791782d07a0e2bd3b06a7adbcdc86e8dcc18d6ee01bacfe04ab
+=== Odoo 19 json2
+tests/live/test_live_odoo.py::test_01_connection PASSED                  [  9%]
+tests/live/test_live_odoo.py::test_02_generic_round_trip PASSED          [ 18%]
+tests/live/test_live_odoo.py::test_03_partner PASSED                     [ 27%]
+tests/live/test_live_odoo.py::test_04_product PASSED                     [ 36%]
+tests/live/test_live_odoo.py::test_05_customer_invoice_attach_post_and_rerun PASSED [ 45%]
+tests/live/test_live_odoo.py::test_06_register_payment_and_rerun PASSED  [ 54%]
+tests/live/test_live_odoo.py::test_07_vendor_bill PASSED                 [ 63%]
+tests/live/test_live_odoo.py::test_08_sale_order PASSED                  [ 72%]
+tests/live/test_live_odoo.py::test_09_reads PASSED                       [ 81%]
+tests/live/test_live_odoo.py::test_10_files_and_export PASSED            [ 90%]
+tests/live/test_live_odoo.py::test_11_changes_since_skips_nothing PASSED [100%]
+============================= 11 passed in 11.07s ==============================
+=== Odoo 19 xmlrpc
+tests/live/test_live_odoo.py::test_01_connection PASSED                  [  9%]
+tests/live/test_live_odoo.py::test_02_generic_round_trip PASSED          [ 18%]
+tests/live/test_live_odoo.py::test_03_partner PASSED                     [ 27%]
+tests/live/test_live_odoo.py::test_04_product PASSED                     [ 36%]
+tests/live/test_live_odoo.py::test_05_customer_invoice_attach_post_and_rerun PASSED [ 45%]
+tests/live/test_live_odoo.py::test_06_register_payment_and_rerun PASSED  [ 54%]
+tests/live/test_live_odoo.py::test_07_vendor_bill PASSED                 [ 63%]
+tests/live/test_live_odoo.py::test_08_sale_order PASSED                  [ 72%]
+tests/live/test_live_odoo.py::test_09_reads PASSED                       [ 81%]
+tests/live/test_live_odoo.py::test_10_files_and_export PASSED            [ 90%]
+tests/live/test_live_odoo.py::test_11_changes_since_skips_nothing PASSED [100%]
+============================= 11 passed in 47.26s ==============================
+--- write_date rows with microseconds / all res_partner rows, Odoo 19
+46|46
+IMAGE=odoo:20.0 odoo@sha256:a97a7665e2b9fd890e12785491a2c91d779f800bcbc30873dada1c8748b28f1c
+IMAGE=postgres:16-alpine postgres@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+=== Odoo 20 json2
+tests/live/test_live_odoo.py::test_01_connection PASSED                  [  9%]
+tests/live/test_live_odoo.py::test_02_generic_round_trip PASSED          [ 18%]
+tests/live/test_live_odoo.py::test_03_partner PASSED                     [ 27%]
+tests/live/test_live_odoo.py::test_04_product PASSED                     [ 36%]
+tests/live/test_live_odoo.py::test_05_customer_invoice_attach_post_and_rerun PASSED [ 45%]
+tests/live/test_live_odoo.py::test_06_register_payment_and_rerun PASSED  [ 54%]
+tests/live/test_live_odoo.py::test_07_vendor_bill PASSED                 [ 63%]
+tests/live/test_live_odoo.py::test_08_sale_order PASSED                  [ 72%]
+tests/live/test_live_odoo.py::test_09_reads PASSED                       [ 81%]
+tests/live/test_live_odoo.py::test_10_files_and_export PASSED            [ 90%]
+tests/live/test_live_odoo.py::test_11_changes_since_skips_nothing PASSED [100%]
+============================= 11 passed in 11.53s ==============================
+=== Odoo 20 xmlrpc
+tests/live/test_live_odoo.py::test_01_connection PASSED                  [  9%]
+tests/live/test_live_odoo.py::test_02_generic_round_trip PASSED          [ 18%]
+tests/live/test_live_odoo.py::test_03_partner PASSED                     [ 27%]
+tests/live/test_live_odoo.py::test_04_product PASSED                     [ 36%]
+tests/live/test_live_odoo.py::test_05_customer_invoice_attach_post_and_rerun PASSED [ 45%]
+tests/live/test_live_odoo.py::test_06_register_payment_and_rerun PASSED  [ 54%]
+tests/live/test_live_odoo.py::test_07_vendor_bill PASSED                 [ 63%]
+tests/live/test_live_odoo.py::test_08_sale_order PASSED                  [ 72%]
+tests/live/test_live_odoo.py::test_09_reads PASSED                       [ 81%]
+tests/live/test_live_odoo.py::test_10_files_and_export PASSED            [ 90%]
+tests/live/test_live_odoo.py::test_11_changes_since_skips_nothing PASSED [100%]
+============================= 11 passed in 47.72s ==============================
+--- write_date rows with microseconds / all res_partner rows, Odoo 20
+48|48
+0
+DONE

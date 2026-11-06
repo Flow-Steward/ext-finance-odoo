@@ -5,7 +5,7 @@ PostgreSQL 15, or 16 for Odoo 20; apps account, sale, stock; demo data) and
 `tests/live/test_live_odoo.py` through the real runtime.
 
 Latest run: 2026-11-06, extension commit `70d0f6c632d894c8aec58d62ef12d7fb2836cad1` (clean
-tree). Machine log: [`logs/2026-11-06-70d0f6c.log`](logs/2026-11-06-70d0f6c.log).
+tree). Machine log: [`runs/2026-11-06-70d0f6c.txt`](runs/2026-11-06-70d0f6c.txt).
 
 Every run covers: test_connection; the generic round trip (create, read, update, clear a field
 with null, search, count, group and total, group by month, describe fields, call a method,
