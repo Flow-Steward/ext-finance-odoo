@@ -13,10 +13,10 @@ import yaml
 BUNDLE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BUNDLE_ROOT / "tests" / "reference"))
 
-import build_contracts  # noqa: E402
+import build_contracts
 
-from runtime import catalog  # noqa: E402
-from runtime.operations import _neutral_result  # noqa: E402
+from runtime import catalog
+from runtime.operations import _neutral_result
 
 
 def _load(relative: str) -> Any:
@@ -163,7 +163,7 @@ def test_api_page_documents_every_operation(built) -> None:
 
 def test_manifest_basics() -> None:
     manifest = _load("extension.yaml")
-    assert manifest["extension_id"] == "flowsteward.odoo" and manifest["version"] == "0.1.1"
+    assert manifest["extension_id"] == "flowsteward.odoo" and manifest["version"] == "0.1.2"
     assert manifest["egress"] == {"connection_fields": ["odoo.base_url"]}
     categories = json.loads((BUNDLE_ROOT / "tests/reference/categories.json").read_text("utf-8"))
     assert manifest["listing"]["category"] == "finance"

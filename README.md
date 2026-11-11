@@ -1,7 +1,12 @@
 # Odoo for Flow Steward
 
-`flowsteward.odoo` connects Flow Steward workflows to **Odoo 16, 17, 18, 19 and 20** — Odoo
-Online, Odoo.sh or your own server — through Odoo's documented external APIs:
+Connect Flow Steward workflows to Odoo accounting, sales, inventory and partner records through Odoo's external APIs. Everyday steps find or create partners and products, create customer invoices and vendor bills, register payments and prepare sale orders. They also read stock levels, product prices, partner balances and records changed since a chosen date, and attach or download files associated with Odoo records.
+
+Use these steps to move incoming shop orders into sales and accounting, pass supplier invoices into Odoo, publish stock and price changes to other systems or assemble outstanding-balance checks. Where an integration needs another installed model, advanced operations provide domain-filtered search, reads by ID, record counts, grouped totals and field descriptions, alongside create, update, delete and public model-method calls. JSONL export supports larger record exchanges with continuation information.
+
+The release targets Odoo 16 through 20, using JSON-2 on Odoo 19 and later or XML-RPC on the supported versions. Available models, fields and actions depend on the installed Odoo modules and the API user's permissions. Connections identify an Odoo database and API key within a project. Separate project connections let workflows select the intended company or database for each task.
+
+Create an API key for the Odoo user whose access the workflows should use, and configure the public HTTPS server and API mode in the project connection. XML-RPC also requires the database name and login; Odoo Online requires a plan with external API access, identified as Custom in this release guide.
 
 - **JSON-2** (Odoo 19+): `POST /json/2/<model>/<method>` with `Authorization: bearer <API key>`
   ([docs](https://www.odoo.com/documentation/19.0/developer/reference/external_api.html));
