@@ -501,7 +501,7 @@ actions:
   - timeout_unknown
   - module_not_installed
 - action_id: stock_levels
-  title: Stock levels
+  title: Read stock levels
   description: Quantities on hand, reserved and available in internal locations, per product, location
     and lot.
   required_scopes:
@@ -557,7 +557,7 @@ actions:
   - blocked_address
   - module_not_installed
 - action_id: product_prices
-  title: Product prices
+  title: Read product prices
   description: A product's sales price, list price and cost, and the pricelist rules for it. Odoo's computed
     pricelist price is a private method and cannot be called through the API.
   required_scopes:
@@ -609,7 +609,7 @@ actions:
   - redirect_rejected
   - blocked_address
 - action_id: changes_since
-  title: Changes since
+  title: Read records changed since a date
   description: 'Records of one kind changed at or after a moment (write_date), oldest first, archived
     ones included. To continue, pass next_since as since and next_after_id as after_id: no record is skipped.
     The last second read may come again on the next call; match records by id.'
@@ -667,7 +667,7 @@ actions:
   - blocked_address
   - module_not_installed
 - action_id: partner_balance
-  title: Partner balance
+  title: Read partner balance
   description: 'What a partner owes and is owed: Odoo''s receivable and payable totals, and the open invoices
     and bills with what is still due and what is overdue.'
   required_scopes:

@@ -1,5 +1,8 @@
 # Odoo for Flow Steward
 
+See the [workflow action guide](docs/workflow-actions.md) for setup, invoice examples,
+paging and advanced-action inputs.
+
 Connect Flow Steward workflows to Odoo accounting, sales, inventory and partner records through Odoo's external APIs. Everyday steps find or create partners and products, create customer invoices and vendor bills, register payments and prepare sale orders. They also read stock levels, product prices, partner balances and records changed since a chosen date, and attach or download files associated with Odoo records.
 
 Use these steps to move incoming shop orders into sales and accounting, pass supplier invoices into Odoo, publish stock and price changes to other systems or assemble outstanding-balance checks. Where an integration needs another installed model, advanced operations provide domain-filtered search, reads by ID, record counts, grouped totals and field descriptions, alongside create, update, delete and public model-method calls. JSONL export supports larger record exchanges with continuation information.

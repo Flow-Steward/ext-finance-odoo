@@ -27,6 +27,7 @@ forms:
     widget_type: text
     required: false
     help_text: The name, needed when the partner has to be created.
+    placeholder: Example customer Ltd
   - name: is_company
     label: Company
     widget_type: boolean
@@ -75,6 +76,7 @@ forms:
     widget_type: text
     required: false
     help_text: The product name, needed when it has to be created.
+    placeholder: Example product
   - name: kind
     label: Kind
     widget_type: select
@@ -153,6 +155,7 @@ forms:
     widget_type: json
     required: true
     help_text: 'The lines, 1 to 200: product or description, quantity, price, discount, taxes.'
+    placeholder: '[{"product_code":"PRODUCT01","quantity":2,"price_unit":12.5}]'
   - name: post
     label: Post
     widget_type: boolean
@@ -308,7 +311,7 @@ forms:
     required: false
     help_text: Confirm the quotation into a sale order.
 - operation_id: stock_levels
-  title: Stock levels
+  title: Read stock levels
   fields:
   - name: product_id
     label: Product id
@@ -336,7 +339,7 @@ forms:
     required: false
     help_text: How many records to skip; pass next_offset to continue.
 - operation_id: product_prices
-  title: Product prices
+  title: Read product prices
   fields:
   - name: product_id
     label: Product id
@@ -354,7 +357,7 @@ forms:
     required: false
     help_text: Only the rules of this pricelist.
 - operation_id: changes_since
-  title: Changes since
+  title: Read records changed since a date
   fields:
   - name: entity
     label: What
@@ -379,6 +382,7 @@ forms:
     widget_type: text
     required: true
     help_text: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS, in UTC. Records changed at this moment are included.
+    placeholder: '2026-01-01 00:00:00'
   - name: after_id
     label: After id
     widget_type: number
@@ -395,7 +399,7 @@ forms:
     required: false
     help_text: Records per page, 1 to 200. Default 80.
 - operation_id: partner_balance
-  title: Partner balance
+  title: Read partner balance
   fields:
   - name: partner_id
     label: Partner id

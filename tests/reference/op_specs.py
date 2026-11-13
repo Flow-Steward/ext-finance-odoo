@@ -497,7 +497,7 @@ def operations() -> list[dict[str, Any]]:
         },
         {
             "operation_id": "stock_levels",
-            "display_name": "Stock levels",
+            "display_name": "Read stock levels",
             "kind": "source",
             "module": "stock",
             "calls": ["stock.quant search_read"],
@@ -534,7 +534,7 @@ def operations() -> list[dict[str, Any]]:
         },
         {
             "operation_id": "product_prices",
-            "display_name": "Product prices",
+            "display_name": "Read product prices",
             "kind": "source",
             "calls": ["product.product read", "product.pricelist.item search_read"],
             "description": (
@@ -565,7 +565,7 @@ def operations() -> list[dict[str, Any]]:
         },
         {
             "operation_id": "changes_since",
-            "display_name": "Changes since",
+            "display_name": "Read records changed since a date",
             "kind": "source",
             "calls": ["<model> search_read on write_date"],
             "description": (
@@ -621,7 +621,7 @@ def operations() -> list[dict[str, Any]]:
         },
         {
             "operation_id": "partner_balance",
-            "display_name": "Partner balance",
+            "display_name": "Read partner balance",
             "kind": "source",
             "module": "account",
             "calls": ["res.partner read", "account.move search_read"],

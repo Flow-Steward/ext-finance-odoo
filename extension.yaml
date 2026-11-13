@@ -4,16 +4,28 @@ lifecycle:
   data_migrations: []
 extension_id: flowsteward.odoo
 kind: tool_provider
-version: 0.1.2
+version: 0.1.3
 release_stage: active
 billing_mode: free
 display_name: Odoo
-description: |-
-  Connect Flow Steward workflows to Odoo accounting, sales, inventory and partner records through Odoo's external APIs. Everyday steps find or create partners and products, create customer invoices and vendor bills, register payments and prepare sale orders. They also read stock levels, product prices, partner balances and records changed since a chosen date, and attach or download files associated with Odoo records.
+description: 'Connect Flow Steward workflows to Odoo accounting, sales, inventory and partner records
+  through Odoo''s external APIs. Everyday steps find or create partners and products, create customer
+  invoices and vendor bills, register payments and prepare sale orders. They also read stock levels, product
+  prices, partner balances and records changed since a chosen date, and attach or download files associated
+  with Odoo records.
 
-  Use these steps to move incoming shop orders into sales and accounting, pass supplier invoices into Odoo, publish stock and price changes to other systems or assemble outstanding-balance checks. Where an integration needs another installed model, advanced operations provide domain-filtered search, reads by ID, record counts, grouped totals and field descriptions, alongside create, update, delete and public model-method calls. JSONL export supports larger record exchanges with continuation information.
 
-  The release targets Odoo 16 through 20, using JSON-2 on Odoo 19 and later or XML-RPC on the supported versions. Available models, fields and actions depend on the installed Odoo modules and the API user's permissions. Connections identify an Odoo database and API key within a project. Separate project connections let workflows select the intended company or database for each task.
+  Use these steps to move incoming shop orders into sales and accounting, pass supplier invoices into
+  Odoo, publish stock and price changes to other systems or assemble outstanding-balance checks. Where
+  an integration needs another installed model, advanced operations provide domain-filtered search, reads
+  by ID, record counts, grouped totals and field descriptions, alongside create, update, delete and public
+  model-method calls. JSONL export supports larger record exchanges with continuation information.
+
+
+  The release targets Odoo 16 through 20, using JSON-2 on Odoo 19 and later or XML-RPC on the supported
+  versions. Available models, fields and actions depend on the installed Odoo modules and the API user''s
+  permissions. Connections identify an Odoo database and API key within a project. Separate project connections
+  let workflows select the intended company or database for each task.'
 vendor:
   name: Flow Steward
   support_url: https://github.com/Flow-Steward/ext-finance-odoo/issues
@@ -28,13 +40,17 @@ listing:
   - crm
   - inventory
   - sales
-  summary: "Automate Odoo partners, products, invoices, bills, payments, sales and stock, with model-level search, reporting and record operations."
+  summary: Automate Odoo partners, products, invoices, bills, payments, sales and stock, with model-level
+    search, reporting and record operations.
   categories:
   - finance
   - sales
   - inventory
   - crm
-  setup_summary: "Create an API key for the Odoo user whose access the workflows should use, and configure the public HTTPS server and API mode in the project connection. XML-RPC also requires the database name and login; Odoo Online requires a plan with external API access, identified as Custom in this release guide."
+  setup_summary: Create an API key for the Odoo user whose access the workflows should use, and configure
+    the public HTTPS server and API mode in the project connection. XML-RPC also requires the database
+    name and login; Odoo Online requires a plan with external API access, identified as Custom in this
+    release guide.
 features:
 - tool
 - action

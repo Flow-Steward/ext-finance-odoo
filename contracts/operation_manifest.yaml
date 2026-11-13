@@ -1128,7 +1128,7 @@ operations:
   - timeout_unknown
   - module_not_installed
 - operation_id: stock_levels
-  display_name: Stock levels
+  display_name: Read stock levels
   description: Quantities on hand, reserved and available in internal locations, per product, location
     and lot.
   operation_kind: source
@@ -1237,7 +1237,7 @@ operations:
   - blocked_address
   - module_not_installed
 - operation_id: product_prices
-  display_name: Product prices
+  display_name: Read product prices
   description: A product's sales price, list price and cost, and the pricelist rules for it. Odoo's computed
     pricelist price is a private method and cannot be called through the API.
   operation_kind: source
@@ -1353,7 +1353,7 @@ operations:
   - redirect_rejected
   - blocked_address
 - operation_id: changes_since
-  display_name: Changes since
+  display_name: Read records changed since a date
   description: 'Records of one kind changed at or after a moment (write_date), oldest first, archived
     ones included. To continue, pass next_since as since and next_after_id as after_id: no record is skipped.
     The last second read may come again on the next call; match records by id.'
@@ -1471,7 +1471,7 @@ operations:
   - blocked_address
   - module_not_installed
 - operation_id: partner_balance
-  display_name: Partner balance
+  display_name: Read partner balance
   description: 'What a partner owes and is owed: Odoo''s receivable and payable totals, and the open invoices
     and bills with what is still due and what is overdue.'
   operation_kind: source

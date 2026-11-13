@@ -84,7 +84,7 @@ components:
     - Inputs: `partner_id` (optional), `partner_ref` (optional), `partner_vat` (optional), `partner_email` (optional), `partner_name` (optional), `reference` (optional), `order_date` (optional), `lines`, `confirm` (optional)
     - Results: `order_id`, `number`, `state`, `created`, `partner_id`, `partner_created`, `total`, `confirmed`, `record`
 
-    ### Stock levels
+    ### Read stock levels
 
     Quantities on hand, reserved and available in internal locations, per product, location and lot.
 
@@ -95,7 +95,7 @@ components:
     - Inputs: `product_id` (optional), `product_code` (optional), `location_id` (optional), `limit` (optional), `offset` (optional)
     - Results: `items`, `count`, `totals`, `has_more`, `next_offset`
 
-    ### Product prices
+    ### Read product prices
 
     A product's sales price, list price and cost, and the pricelist rules for it. Odoo's computed pricelist price is a private method and cannot be called through the API.
 
@@ -105,7 +105,7 @@ components:
     - Inputs: `product_id` (optional), `product_code` (optional), `pricelist_id` (optional)
     - Results: `product_id`, `product`, `sales_price`, `list_price`, `cost`, `currency`, `unit`, `pricelist_rules`
 
-    ### Changes since
+    ### Read records changed since a date
 
     Records of one kind changed at or after a moment (write_date), oldest first, archived ones included. To continue, pass next_since as since and next_after_id as after_id: no record is skipped. The last second read may come again on the next call; match records by id.
 
@@ -115,7 +115,7 @@ components:
     - Inputs: `entity`, `since`, `after_id` (optional), `fields` (optional), `limit` (optional)
     - Results: `model`, `records`, `count`, `has_more`, `next_since`, `next_after_id`
 
-    ### Partner balance
+    ### Read partner balance
 
     What a partner owes and is owed: Odoo's receivable and payable totals, and the open invoices and bills with what is still due and what is overdue.
 
