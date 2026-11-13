@@ -8,6 +8,29 @@ components:
   type: markdown
   title: Release history
   body: |
+    ## 0.1.5 — 2026-11-16
+
+    ### Changed
+
+    - Compatible with Flow Steward 0.9.16. The result-size budget stays within the host's
+      secret-check limits; its notes now describe the 0.9.16 limits.
+    - Icon: rendered from Odoo's official vector app icon (`odoo-icon.svg` in the odoo/odoo
+      repository, branch 19.0) at 256 px instead of the 192 px PNG reduced to 128 px. Same mark
+      and colours, sharper edges.
+    - `extension.yaml` is kept in the layout `flow-steward extensions lock-deps` writes, and the
+      contract generator writes the same layout.
+
+    ### Added
+
+    - `BRANDING.md` in the bundle: the icon's official source, the SHA-256 of the source and of
+      `icon.png`, how it was converted, and Odoo's brand usage terms. A test checks the recorded
+      icon hash.
+
+    ### Fixed
+
+    - Tests: the import path for the reference generators is set in `tests/conftest.py`, so the
+      test modules import at the top of the file and pass the ruff check (E402).
+
     ## 0.1.4
 
     ### Added

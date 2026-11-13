@@ -3,20 +3,18 @@
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 from typing import Any
 
 import pytest
 import yaml
 
-BUNDLE_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(BUNDLE_ROOT / "tests" / "reference"))
-
-import build_contracts
+import build_contracts  # tests/reference is put on sys.path by tests/conftest.py
 
 from runtime import catalog
 from runtime.operations import _neutral_result
+
+BUNDLE_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _load(relative: str) -> Any:
@@ -163,7 +161,7 @@ def test_api_page_documents_every_operation(built) -> None:
 
 def test_manifest_basics() -> None:
     manifest = _load("extension.yaml")
-    assert manifest["extension_id"] == "flowsteward.odoo" and manifest["version"] == "0.1.4"
+    assert manifest["extension_id"] == "flowsteward.odoo" and manifest["version"] == "0.1.5"
     assert manifest["egress"] == {"connection_fields": ["odoo.base_url"]}
     categories = json.loads((BUNDLE_ROOT / "tests/reference/categories.json").read_text("utf-8"))
     assert manifest["listing"]["category"] == "finance"

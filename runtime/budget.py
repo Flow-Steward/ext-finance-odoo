@@ -1,13 +1,13 @@
 """Keep one step's result inside what the host accepts.
 
 The host scans every string of an extension response for reflected secrets and
-fails closed past fixed budgets (core ``secret_reflection``: 16,384 candidate
-strings — dict keys and string values — 65,536 traversed nodes, 8 M compared
-code points), and ``main.py`` caps the serialized response at 4.5 MiB. A wide
-Odoo search reaches those limits quickly: 100 rows of 80 fields is already
-16,000 strings. This module measures a result the same way, with a margin for
-the envelope, so multi-page reads stop at a page boundary instead of being
-blocked whole.
+fails closed past fixed budgets (core ``secret_reflection`` in Flow Steward
+0.9.16: 3,145,728 traversed nodes, 64 Mi compared code points, nesting depth 64;
+earlier hosts also capped candidate strings at 16,384 and nodes at 65,536), and
+``main.py`` caps the serialized response at 4.5 MiB. The caps below stay within
+the earlier, stricter host budgets, so one result fits every supported host.
+This module measures a result the same way, with a margin for the envelope, so
+multi-page reads stop at a page boundary instead of being blocked whole.
 """
 
 from __future__ import annotations

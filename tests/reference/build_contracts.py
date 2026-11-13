@@ -309,9 +309,9 @@ def splice_effects(effects: list[dict[str, Any]]) -> None:
         if key != "external_effects":
             rebuilt[key] = value
     rebuilt.setdefault("external_effects", effects)
-    manifest.write_text(
-        yaml.safe_dump(rebuilt, sort_keys=False, allow_unicode=True, width=100), encoding="utf-8"
-    )
+    # Same layout as `flow-steward extensions lock-deps`, so the two tools never re-flow
+    # each other's output.
+    manifest.write_text(yaml.safe_dump(rebuilt, sort_keys=False), encoding="utf-8")
 
 
 def outputs() -> dict[str, Any]:
