@@ -637,6 +637,10 @@ def status_error(
             status=status,
         )
     if status == 429:
+        if mutating or risky:
+            return _unknown(
+                "Odoo rate limited the write without confirming its outcome", status=status
+            )
         return _failure(
             errors.RATE_LIMITED,
             "Odoo is rate limiting these requests",

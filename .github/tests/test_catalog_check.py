@@ -7,6 +7,7 @@ import importlib.util
 import io
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from urllib.error import URLError
 
 import pytest
@@ -27,6 +28,24 @@ def test_checker_is_fetched_at_a_pinned_commit():
     assert len(module.CATALOG_REVISION) == 40
     assert module.CATALOG.endswith(module.CATALOG_REVISION)
     assert "/main" not in module.CATALOG
+
+
+def test_packaging_refuses_a_symbolic_link(monkeypatch, tmp_path):
+    _load()
+    import package_extension
+
+    regular_file = tmp_path / "regular.txt"
+    regular_file.write_text("fixture", encoding="utf-8")
+    (tmp_path / "linked.txt").symlink_to(regular_file)
+    monkeypatch.setattr(package_extension, "ROOT", tmp_path)
+    monkeypatch.setattr(
+        package_extension.subprocess,
+        "run",
+        lambda *_args, **_kwargs: SimpleNamespace(stdout="linked.txt\0"),
+    )
+
+    with pytest.raises(SystemExit, match="regular file"):
+        package_extension.shipped_files()
 
 
 def test_a_changed_checker_is_refused_and_fails_the_job(monkeypatch, tmp_path):

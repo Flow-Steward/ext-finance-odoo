@@ -277,3 +277,14 @@ def test_429_is_retried() -> None:
     opener = Opener((429, b""), (200, 3))
     assert transport(opener).call("res.partner", "search_count", kwargs={}) == 3
     assert len(opener.requests) == 2
+
+
+@pytest.mark.parametrize("risky", [False, True])
+def test_429_does_not_retry_a_write(risky: bool) -> None:
+    opener = Opener((429, b""), (200, 3))
+    with pytest.raises(ExtensionError) as caught:
+        transport(opener).call("res.partner", "write", ids=[1], mutating=True, risky=risky)
+    assert caught.value.code == errors.TIMEOUT_UNKNOWN
+    assert caught.value.definitely_no_external_effect is False
+    assert caught.value.retryable is False
+    assert len(opener.requests) == 1

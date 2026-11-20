@@ -17,6 +17,7 @@ only the wheels that install on it and a .fs-package.yaml naming the target.
 from __future__ import annotations
 
 import re
+import stat
 import struct
 import subprocess
 import sys
@@ -26,7 +27,13 @@ from pathlib import Path, PurePosixPath
 ROOT = Path(__file__).resolve().parents[2]
 # The product bundler leaves these out (core/application/tooling/extensions/bundle_extension.py).
 EXCLUDED_DIRECTORIES = {
-    ".fs-python", ".hypothesis", ".mypy_cache", ".pytest_cache", ".ruff_cache", "__pycache__", "dev-wheels",
+    ".fs-python",
+    ".hypothesis",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    "__pycache__",
+    "dev-wheels",
 }
 EXCLUDED_FILES = {".fs-extension-install.yaml", ".fs-package.yaml"}
 REPOSITORY_TOOLING = {".github", "dist"}
@@ -49,7 +56,9 @@ def manifest_field(name: str) -> str:
 
 
 def shipped_files() -> list[str]:
-    out = subprocess.run(["git", "ls-files", "-z"], cwd=ROOT, check=True, capture_output=True, text=True).stdout
+    out = subprocess.run(
+        ["git", "ls-files", "-z"], cwd=ROOT, check=True, capture_output=True, text=True
+    ).stdout
     files = []
     for name in sorted(p for p in out.split("\0") if p):
         parts = PurePosixPath(name).parts
@@ -59,6 +68,14 @@ def shipped_files() -> list[str]:
             continue
         if parts[0] == "bin":
             sys.exit("bin/ needs one archive per runtime target; see the catalog README")
+        source = ROOT / name
+        try:
+            regular = stat.S_ISREG(source.lstat().st_mode)
+            inside = source.resolve(strict=True).is_relative_to(ROOT)
+        except (OSError, RuntimeError):
+            regular = inside = False
+        if not regular or not inside:
+            sys.exit(f"{name!r} must be a regular file inside the extension checkout")
         files.append(name)
     return files
 
@@ -86,7 +103,10 @@ def wheel_supports_target(name: str, target: str) -> bool:
     arch = TARGETS[target]
     return any(
         platform == "any"
-        or (platform.startswith(("manylinux", "musllinux", "linux")) and platform.endswith(f"_{arch}"))
+        or (
+            platform.startswith(("manylinux", "musllinux", "linux"))
+            and platform.endswith(f"_{arch}")
+        )
         for platform in _wheel_platforms(PurePosixPath(name).name)
     )
 
@@ -101,26 +121,36 @@ def _write(out: Path, folder: str, files: list[str], *, target: str = "") -> Non
             archive.writestr(f"{folder}/.fs-package.yaml", f"runtime_target: {target}\n")
     size = out.stat().st_size
     if size > MAX_ZIP_BYTES or unpacked > MAX_UNPACKED_BYTES:
-        sys.exit(f"{out.name}: {size} zipped / {unpacked} unpacked bytes exceed Flow Steward's install limits")
-    print(f"{out.relative_to(ROOT)}  {size / 2**20:.1f} MB zipped, {unpacked / 2**20:.1f} MB unpacked")
+        sys.exit(
+            f"{out.name}: {size} zipped / {unpacked} unpacked bytes exceed Flow Steward's install limits"
+        )
+    print(
+        f"{out.relative_to(ROOT)}  {size / 2**20:.1f} MB zipped, {unpacked / 2**20:.1f} MB unpacked"
+    )
 
 
 def main() -> int:
+    files = shipped_files()
     extension_id, version = manifest_field("extension_id"), manifest_field("version")
     folder = extension_id.replace(".", "_").replace("-", "_")
     (ROOT / "dist").mkdir(exist_ok=True)
-    files = shipped_files()
     problem = icon_problem((ROOT / ICON_FILE).read_bytes() if ICON_FILE in files else None)
     if problem:
         sys.exit(f"{extension_id} {version}: {problem}")
-    wheels = [name for name in files if PurePosixPath(name).parts[0] == "wheels" and name.endswith(".whl")]
+    wheels = [
+        name for name in files if PurePosixPath(name).parts[0] == "wheels" and name.endswith(".whl")
+    ]
     per_target = any("any" not in _wheel_platforms(PurePosixPath(name).name) for name in wheels)
     if not per_target:
         _write(ROOT / "dist" / f"{extension_id}-{version}.zip", folder, files)
         return 0
     for target in TARGETS:
-        shipped = [name for name in files if name not in wheels or wheel_supports_target(name, target)]
-        _write(ROOT / "dist" / f"{extension_id}-{version}-{target}.zip", folder, shipped, target=target)
+        shipped = [
+            name for name in files if name not in wheels or wheel_supports_target(name, target)
+        ]
+        _write(
+            ROOT / "dist" / f"{extension_id}-{version}-{target}.zip", folder, shipped, target=target
+        )
     return 0
 
 

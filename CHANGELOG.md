@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.6 — 2026-11-20
+
+### Fixed
+
+- A rate-limited Odoo write is reported as unconfirmed so the workflow can check Odoo before retrying.
+- Extension packaging accepts only regular files inside the checkout.
+
 ## 0.1.5 — 2026-11-16
 
 ### Changed
